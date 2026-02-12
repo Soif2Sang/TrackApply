@@ -1,5 +1,5 @@
 {
-  "name": "lucas-rework",
+  "name": "Word Automation",
   "private": true,
   "workspaces": [
     "apps/*",

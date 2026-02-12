@@ -17,8 +17,15 @@ export const queryClient = new QueryClient({
       });
     },
   }),
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000,
+    },
+  },
 });
 
+console.log('import.meta.env', import.meta.env);
+console.log(`${import.meta.env.VITE_SERVER_URL}/trpc`)
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({

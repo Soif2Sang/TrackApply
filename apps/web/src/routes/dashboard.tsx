@@ -1,37 +1,67 @@
-import { authClient } from "@/lib/auth-client";
-import { trpc } from "@/utils/trpc";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, redirect } from '@tanstack/react-router';
+import { authClient } from '@/lib/auth-client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export const Route = createFileRoute("/dashboard")({
-  component: RouteComponent,
-});
-
-function RouteComponent() {
-  const { data: session, isPending } = authClient.useSession();
-
-  const navigate = Route.useNavigate();
-
-  const privateData = useQuery(trpc.privateData.queryOptions());
-
-  useEffect(() => {
-    if (!session && !isPending) {
-      navigate({
-        to: "/login",
+export const Route = createFileRoute('/dashboard')({
+  beforeLoad: async () => {
+    const { data: session } = await authClient.getSession();
+    if (!session) {
+      throw redirect({
+        to: '/sign-in',
+        search: {
+          redirect: '/dashboard',
+        },
       });
     }
-  }, [session, isPending]);
+  },
+  component: DashboardComponent,
+});
 
-  if (isPending) {
-    return <div>Loading...</div>;
-  }
-
+function DashboardComponent() {
   return (
-    <div>
-      <h1>Dashboard</h1>
-      <p>Welcome {session?.user.name}</p>
-      <p>privateData: {privateData.data?.message}</p>
+    <div className="container mx-auto py-8">
+      <h1 className="text-4xl font-bold mb-8">Dashboard</h1>
+      
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome</CardTitle>
+            <CardDescription>You're logged in successfully</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              This is a clean boilerplate with authentication built in.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Get Started</CardTitle>
+            <CardDescription>Start building your application</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">
+              Add your custom features, routes, and components here.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Documentation</CardTitle>
+            <CardDescription>Learn more about the stack</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="list-disc list-inside text-muted-foreground space-y-1">
+              <li>TanStack Router</li>
+              <li>tRPC</li>
+              <li>Better Auth</li>
+              <li>Drizzle ORM</li>
+            </ul>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

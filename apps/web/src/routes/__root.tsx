@@ -1,10 +1,12 @@
-import Header from "@/components/header";
+import { Navbar1 } from "@/components/navbar";
 import Loader from "@/components/loader";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { authClient } from "@/lib/auth-client";
+
 import {
   HeadContent,
   Outlet,
@@ -17,6 +19,7 @@ import "../index.css";
 export interface RouterAppContext {
   trpc: typeof trpc;
   queryClient: QueryClient;
+  auth: typeof authClient;
 }
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
@@ -24,11 +27,11 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   head: () => ({
     meta: [
       {
-        title: "lucas-rework",
+        title: "Full-Stack TypeScript Boilerplate",
       },
       {
         name: "description",
-        content: "lucas-rework is a web application",
+        content: "A modern full-stack boilerplate with React, tRPC, Better Auth, and Drizzle ORM",
       },
     ],
     links: [
@@ -51,12 +54,12 @@ function RootComponent() {
       <HeadContent />
       <ThemeProvider
         attribute="class"
-        defaultTheme="dark"
+        defaultTheme="system"
         disableTransitionOnChange
         storageKey="vite-ui-theme"
       >
-        <div className="grid grid-rows-[auto_1fr] h-svh">
-          <Header />
+        <div className="grid grid-rows-[auto_1fr] h-svh bg-background">
+          <Navbar1 />
           {isFetching ? <Loader /> : <Outlet />}
         </div>
         <Toaster richColors />

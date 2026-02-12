@@ -1,0 +1,37 @@
+services:
+  server:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile
+      args:
+        BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+        BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+        CORS_ORIGIN: ${CORS_ORIGIN}
+        DATABASE_URL: ${DATABASE_URL}
+    environment:
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
+      - BETTER_AUTH_URL=${BETTER_AUTH_URL}
+      - CORS_ORIGIN=${CORS_ORIGIN}
+      - DATABASE_URL=${DATABASE_URL}
+    expose:
+      - 3002
+    networks:
+      - dokploy-network
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    environment:
+      - VITE_API_URL=${VITE_API_URL}
+    expose:
+      - 81
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
+  
