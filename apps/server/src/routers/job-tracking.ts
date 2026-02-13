@@ -181,8 +181,9 @@ async function findMatchingApplication(
       appCompany.includes(normalizedCompany) ||
       normalizedCompany.includes(appCompany);
 
-    // Check for position match
-    const positionMatch =
+    // Check for position match (if position is known)
+    const isUnknownPosition = position === "Unknown Position" || !position;
+    const positionMatch = isUnknownPosition ||
       appPosition === normalizedPosition ||
       appPosition.includes(normalizedPosition) ||
       normalizedPosition.includes(appPosition);
