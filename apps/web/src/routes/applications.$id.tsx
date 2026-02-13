@@ -9,7 +9,8 @@ import {
   Calendar, 
   Building2, 
   ChevronLeft,
-  Briefcase
+  Briefcase,
+  ExternalLink
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { LogOut, Loader2 } from "lucide-react";
@@ -26,6 +27,14 @@ const statusColors: Record<string, string> = {
   rejected: "bg-red-100 text-red-800 border-red-200",
   withdrawn: "bg-gray-100 text-gray-800 border-gray-200",
 };
+
+// Function to generate Gmail URL from Gmail message ID
+function getGmailUrl(emailId: string | null): string | null {
+  if (!emailId) return null;
+  // Gmail URL format: opens specific message by Gmail ID
+  // Format: https://mail.google.com/mail/u/0/#all/{message_id}
+  return `https://mail.google.com/mail/u/0/#all/${encodeURIComponent(emailId)}`;
+}
 
 // Classification badge color mapping
 const classificationColors: Record<string, string> = {
@@ -220,7 +229,21 @@ function ApplicationDetailPage() {
                         </span>
                       )}
                     </div>
-                    <p className="font-medium text-sm">{event.subject}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{event.subject}</p>
+                      {event.emailId && (
+                        <a
+                          href={getGmailUrl(event.emailId) || '#'}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-muted-foreground hover:text-primary transition-colors"
+                          title="Open in Gmail"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       From: {event.from}
                     </p>
