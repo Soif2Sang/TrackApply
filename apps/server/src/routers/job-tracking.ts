@@ -26,7 +26,7 @@ const n8nWebhookPayload = z.object({
 
   // Classification results from Gemini/n8n
   classification: z.enum(classificationEnum),
-  position: z.string(),
+  position: z.string().optional().default("Unknown Position"),
   company: z.string(),
   job_id: z.string().nullable().optional().transform((val) => val === null ? undefined : val),
   confidence: z.string().optional(),
