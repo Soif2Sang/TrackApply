@@ -1,0 +1,1 @@
+ALTER TABLE "application_events" ALTER COLUMN "confidence" SET DATA TYPE text;

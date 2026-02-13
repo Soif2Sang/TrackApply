@@ -1,1 +1,0 @@
-ALTER TABLE "organization_invitations" ALTER COLUMN "organization_id" SET DATA TYPE text;

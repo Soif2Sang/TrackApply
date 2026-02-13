@@ -5,50 +5,22 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1753260295335,
-      "tag": "0000_cultured_darkhawk",
+      "when": 1770938504967,
+      "tag": "0000_lame_tomorrow_man",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1753301456517,
-      "tag": "0001_nebulous_wrecker",
+      "when": 1770939717177,
+      "tag": "0001_peaceful_sugar_man",
       "breakpoints": true
     },
     {
       "idx": 2,
       "version": "7",
-      "when": 1753305962266,
-      "tag": "0002_nostalgic_guardian",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1753455713315,
-      "tag": "0003_useful_the_fallen",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1753457338960,
-      "tag": "0004_absent_corsair",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1753873990866,
-      "tag": "0005_cold_captain_stacy",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1759783671736,
-      "tag": "0006_thankful_kingpin",
+      "when": 1770942565793,
+      "tag": "0002_spicy_king_cobra",
       "breakpoints": true
     }
   ]

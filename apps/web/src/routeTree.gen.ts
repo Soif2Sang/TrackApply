@@ -9,36 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SupportRouteImport } from './routes/support'
-import { Route as StatusRouteImport } from './routes/status'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as OrganizationOrgIdRouteRouteImport } from './routes/organization/$orgId/route'
-import { Route as OrganizationOrgIdIndexRouteImport } from './routes/organization/$orgId/index'
-import { Route as OrganizationOrgIdTemplatesRouteRouteImport } from './routes/organization/$orgId/templates/route'
-import { Route as OrganizationOrgIdClientsRouteRouteImport } from './routes/organization/$orgId/clients/route'
-import { Route as OrganizationOrgIdTemplatesIndexRouteImport } from './routes/organization/$orgId/templates/index'
-import { Route as OrganizationOrgIdClientsIndexRouteImport } from './routes/organization/$orgId/clients/index'
-import { Route as OrganizationOrgIdTemplatesNewRouteImport } from './routes/organization/$orgId/templates/new'
-import { Route as OrganizationOrgIdClientsNewRouteImport } from './routes/organization/$orgId/clients/new'
-import { Route as OrganizationOrgIdTemplatesTemplateIdEditRouteImport } from './routes/organization/$orgId/templates/$templateId/edit'
-import { Route as OrganizationOrgIdClientsClientIdEditRouteImport } from './routes/organization/$orgId/clients/$clientId/edit'
-import { Route as OrganizationOrgIdClientsClientIdReportsTemplateIdNewRouteImport } from './routes/organization/$orgId/clients/$clientId/reports/$templateId/new'
 
-const SupportRoute = SupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatusRoute = StatusRouteImport.update({
-  id: '/status',
-  path: '/status',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -49,243 +23,44 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResetPasswordRoute = ResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OrganizationOrgIdRouteRoute = OrganizationOrgIdRouteRouteImport.update({
-  id: '/organization/$orgId',
-  path: '/organization/$orgId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OrganizationOrgIdIndexRoute = OrganizationOrgIdIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => OrganizationOrgIdRouteRoute,
-} as any)
-const OrganizationOrgIdTemplatesRouteRoute =
-  OrganizationOrgIdTemplatesRouteRouteImport.update({
-    id: '/templates',
-    path: '/templates',
-    getParentRoute: () => OrganizationOrgIdRouteRoute,
-  } as any)
-const OrganizationOrgIdClientsRouteRoute =
-  OrganizationOrgIdClientsRouteRouteImport.update({
-    id: '/clients',
-    path: '/clients',
-    getParentRoute: () => OrganizationOrgIdRouteRoute,
-  } as any)
-const OrganizationOrgIdTemplatesIndexRoute =
-  OrganizationOrgIdTemplatesIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => OrganizationOrgIdTemplatesRouteRoute,
-  } as any)
-const OrganizationOrgIdClientsIndexRoute =
-  OrganizationOrgIdClientsIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => OrganizationOrgIdClientsRouteRoute,
-  } as any)
-const OrganizationOrgIdTemplatesNewRoute =
-  OrganizationOrgIdTemplatesNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => OrganizationOrgIdTemplatesRouteRoute,
-  } as any)
-const OrganizationOrgIdClientsNewRoute =
-  OrganizationOrgIdClientsNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => OrganizationOrgIdClientsRouteRoute,
-  } as any)
-const OrganizationOrgIdTemplatesTemplateIdEditRoute =
-  OrganizationOrgIdTemplatesTemplateIdEditRouteImport.update({
-    id: '/$templateId/edit',
-    path: '/$templateId/edit',
-    getParentRoute: () => OrganizationOrgIdTemplatesRouteRoute,
-  } as any)
-const OrganizationOrgIdClientsClientIdEditRoute =
-  OrganizationOrgIdClientsClientIdEditRouteImport.update({
-    id: '/$clientId/edit',
-    path: '/$clientId/edit',
-    getParentRoute: () => OrganizationOrgIdClientsRouteRoute,
-  } as any)
-const OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute =
-  OrganizationOrgIdClientsClientIdReportsTemplateIdNewRouteImport.update({
-    id: '/$clientId/reports/$templateId/new',
-    path: '/$clientId/reports/$templateId/new',
-    getParentRoute: () => OrganizationOrgIdClientsRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/pricing': typeof PricingRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/status': typeof StatusRoute
-  '/support': typeof SupportRoute
-  '/organization/$orgId': typeof OrganizationOrgIdRouteRouteWithChildren
-  '/organization/$orgId/clients': typeof OrganizationOrgIdClientsRouteRouteWithChildren
-  '/organization/$orgId/templates': typeof OrganizationOrgIdTemplatesRouteRouteWithChildren
-  '/organization/$orgId/': typeof OrganizationOrgIdIndexRoute
-  '/organization/$orgId/clients/new': typeof OrganizationOrgIdClientsNewRoute
-  '/organization/$orgId/templates/new': typeof OrganizationOrgIdTemplatesNewRoute
-  '/organization/$orgId/clients/': typeof OrganizationOrgIdClientsIndexRoute
-  '/organization/$orgId/templates/': typeof OrganizationOrgIdTemplatesIndexRoute
-  '/organization/$orgId/clients/$clientId/edit': typeof OrganizationOrgIdClientsClientIdEditRoute
-  '/organization/$orgId/templates/$templateId/edit': typeof OrganizationOrgIdTemplatesTemplateIdEditRoute
-  '/organization/$orgId/clients/$clientId/reports/$templateId/new': typeof OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/pricing': typeof PricingRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/status': typeof StatusRoute
-  '/support': typeof SupportRoute
-  '/organization/$orgId': typeof OrganizationOrgIdIndexRoute
-  '/organization/$orgId/clients/new': typeof OrganizationOrgIdClientsNewRoute
-  '/organization/$orgId/templates/new': typeof OrganizationOrgIdTemplatesNewRoute
-  '/organization/$orgId/clients': typeof OrganizationOrgIdClientsIndexRoute
-  '/organization/$orgId/templates': typeof OrganizationOrgIdTemplatesIndexRoute
-  '/organization/$orgId/clients/$clientId/edit': typeof OrganizationOrgIdClientsClientIdEditRoute
-  '/organization/$orgId/templates/$templateId/edit': typeof OrganizationOrgIdTemplatesTemplateIdEditRoute
-  '/organization/$orgId/clients/$clientId/reports/$templateId/new': typeof OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/forgot-password': typeof ForgotPasswordRoute
-  '/pricing': typeof PricingRoute
-  '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
-  '/status': typeof StatusRoute
-  '/support': typeof SupportRoute
-  '/organization/$orgId': typeof OrganizationOrgIdRouteRouteWithChildren
-  '/organization/$orgId/clients': typeof OrganizationOrgIdClientsRouteRouteWithChildren
-  '/organization/$orgId/templates': typeof OrganizationOrgIdTemplatesRouteRouteWithChildren
-  '/organization/$orgId/': typeof OrganizationOrgIdIndexRoute
-  '/organization/$orgId/clients/new': typeof OrganizationOrgIdClientsNewRoute
-  '/organization/$orgId/templates/new': typeof OrganizationOrgIdTemplatesNewRoute
-  '/organization/$orgId/clients/': typeof OrganizationOrgIdClientsIndexRoute
-  '/organization/$orgId/templates/': typeof OrganizationOrgIdTemplatesIndexRoute
-  '/organization/$orgId/clients/$clientId/edit': typeof OrganizationOrgIdClientsClientIdEditRoute
-  '/organization/$orgId/templates/$templateId/edit': typeof OrganizationOrgIdTemplatesTemplateIdEditRoute
-  '/organization/$orgId/clients/$clientId/reports/$templateId/new': typeof OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/forgot-password'
-    | '/pricing'
-    | '/reset-password'
-    | '/sign-in'
-    | '/sign-up'
-    | '/status'
-    | '/support'
-    | '/organization/$orgId'
-    | '/organization/$orgId/clients'
-    | '/organization/$orgId/templates'
-    | '/organization/$orgId/'
-    | '/organization/$orgId/clients/new'
-    | '/organization/$orgId/templates/new'
-    | '/organization/$orgId/clients/'
-    | '/organization/$orgId/templates/'
-    | '/organization/$orgId/clients/$clientId/edit'
-    | '/organization/$orgId/templates/$templateId/edit'
-    | '/organization/$orgId/clients/$clientId/reports/$templateId/new'
+  fullPaths: '/' | '/sign-in' | '/sign-up'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/forgot-password'
-    | '/pricing'
-    | '/reset-password'
-    | '/sign-in'
-    | '/sign-up'
-    | '/status'
-    | '/support'
-    | '/organization/$orgId'
-    | '/organization/$orgId/clients/new'
-    | '/organization/$orgId/templates/new'
-    | '/organization/$orgId/clients'
-    | '/organization/$orgId/templates'
-    | '/organization/$orgId/clients/$clientId/edit'
-    | '/organization/$orgId/templates/$templateId/edit'
-    | '/organization/$orgId/clients/$clientId/reports/$templateId/new'
-  id:
-    | '__root__'
-    | '/'
-    | '/forgot-password'
-    | '/pricing'
-    | '/reset-password'
-    | '/sign-in'
-    | '/sign-up'
-    | '/status'
-    | '/support'
-    | '/organization/$orgId'
-    | '/organization/$orgId/clients'
-    | '/organization/$orgId/templates'
-    | '/organization/$orgId/'
-    | '/organization/$orgId/clients/new'
-    | '/organization/$orgId/templates/new'
-    | '/organization/$orgId/clients/'
-    | '/organization/$orgId/templates/'
-    | '/organization/$orgId/clients/$clientId/edit'
-    | '/organization/$orgId/templates/$templateId/edit'
-    | '/organization/$orgId/clients/$clientId/reports/$templateId/new'
+  to: '/' | '/sign-in' | '/sign-up'
+  id: '__root__' | '/' | '/sign-in' | '/sign-up'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ForgotPasswordRoute: typeof ForgotPasswordRoute
-  PricingRoute: typeof PricingRoute
-  ResetPasswordRoute: typeof ResetPasswordRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
-  StatusRoute: typeof StatusRoute
-  SupportRoute: typeof SupportRoute
-  OrganizationOrgIdRouteRoute: typeof OrganizationOrgIdRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/status': {
-      id: '/status'
-      path: '/status'
-      fullPath: '/status'
-      preLoaderRoute: typeof StatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/sign-up': {
       id: '/sign-up'
       path: '/sign-up'
@@ -300,27 +75,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/reset-password': {
-      id: '/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/forgot-password': {
-      id: '/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof ForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -328,157 +82,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/organization/$orgId': {
-      id: '/organization/$orgId'
-      path: '/organization/$orgId'
-      fullPath: '/organization/$orgId'
-      preLoaderRoute: typeof OrganizationOrgIdRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/organization/$orgId/': {
-      id: '/organization/$orgId/'
-      path: '/'
-      fullPath: '/organization/$orgId/'
-      preLoaderRoute: typeof OrganizationOrgIdIndexRouteImport
-      parentRoute: typeof OrganizationOrgIdRouteRoute
-    }
-    '/organization/$orgId/templates': {
-      id: '/organization/$orgId/templates'
-      path: '/templates'
-      fullPath: '/organization/$orgId/templates'
-      preLoaderRoute: typeof OrganizationOrgIdTemplatesRouteRouteImport
-      parentRoute: typeof OrganizationOrgIdRouteRoute
-    }
-    '/organization/$orgId/clients': {
-      id: '/organization/$orgId/clients'
-      path: '/clients'
-      fullPath: '/organization/$orgId/clients'
-      preLoaderRoute: typeof OrganizationOrgIdClientsRouteRouteImport
-      parentRoute: typeof OrganizationOrgIdRouteRoute
-    }
-    '/organization/$orgId/templates/': {
-      id: '/organization/$orgId/templates/'
-      path: '/'
-      fullPath: '/organization/$orgId/templates/'
-      preLoaderRoute: typeof OrganizationOrgIdTemplatesIndexRouteImport
-      parentRoute: typeof OrganizationOrgIdTemplatesRouteRoute
-    }
-    '/organization/$orgId/clients/': {
-      id: '/organization/$orgId/clients/'
-      path: '/'
-      fullPath: '/organization/$orgId/clients/'
-      preLoaderRoute: typeof OrganizationOrgIdClientsIndexRouteImport
-      parentRoute: typeof OrganizationOrgIdClientsRouteRoute
-    }
-    '/organization/$orgId/templates/new': {
-      id: '/organization/$orgId/templates/new'
-      path: '/new'
-      fullPath: '/organization/$orgId/templates/new'
-      preLoaderRoute: typeof OrganizationOrgIdTemplatesNewRouteImport
-      parentRoute: typeof OrganizationOrgIdTemplatesRouteRoute
-    }
-    '/organization/$orgId/clients/new': {
-      id: '/organization/$orgId/clients/new'
-      path: '/new'
-      fullPath: '/organization/$orgId/clients/new'
-      preLoaderRoute: typeof OrganizationOrgIdClientsNewRouteImport
-      parentRoute: typeof OrganizationOrgIdClientsRouteRoute
-    }
-    '/organization/$orgId/templates/$templateId/edit': {
-      id: '/organization/$orgId/templates/$templateId/edit'
-      path: '/$templateId/edit'
-      fullPath: '/organization/$orgId/templates/$templateId/edit'
-      preLoaderRoute: typeof OrganizationOrgIdTemplatesTemplateIdEditRouteImport
-      parentRoute: typeof OrganizationOrgIdTemplatesRouteRoute
-    }
-    '/organization/$orgId/clients/$clientId/edit': {
-      id: '/organization/$orgId/clients/$clientId/edit'
-      path: '/$clientId/edit'
-      fullPath: '/organization/$orgId/clients/$clientId/edit'
-      preLoaderRoute: typeof OrganizationOrgIdClientsClientIdEditRouteImport
-      parentRoute: typeof OrganizationOrgIdClientsRouteRoute
-    }
-    '/organization/$orgId/clients/$clientId/reports/$templateId/new': {
-      id: '/organization/$orgId/clients/$clientId/reports/$templateId/new'
-      path: '/$clientId/reports/$templateId/new'
-      fullPath: '/organization/$orgId/clients/$clientId/reports/$templateId/new'
-      preLoaderRoute: typeof OrganizationOrgIdClientsClientIdReportsTemplateIdNewRouteImport
-      parentRoute: typeof OrganizationOrgIdClientsRouteRoute
-    }
   }
 }
-
-interface OrganizationOrgIdClientsRouteRouteChildren {
-  OrganizationOrgIdClientsNewRoute: typeof OrganizationOrgIdClientsNewRoute
-  OrganizationOrgIdClientsIndexRoute: typeof OrganizationOrgIdClientsIndexRoute
-  OrganizationOrgIdClientsClientIdEditRoute: typeof OrganizationOrgIdClientsClientIdEditRoute
-  OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute: typeof OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute
-}
-
-const OrganizationOrgIdClientsRouteRouteChildren: OrganizationOrgIdClientsRouteRouteChildren =
-  {
-    OrganizationOrgIdClientsNewRoute: OrganizationOrgIdClientsNewRoute,
-    OrganizationOrgIdClientsIndexRoute: OrganizationOrgIdClientsIndexRoute,
-    OrganizationOrgIdClientsClientIdEditRoute:
-      OrganizationOrgIdClientsClientIdEditRoute,
-    OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute:
-      OrganizationOrgIdClientsClientIdReportsTemplateIdNewRoute,
-  }
-
-const OrganizationOrgIdClientsRouteRouteWithChildren =
-  OrganizationOrgIdClientsRouteRoute._addFileChildren(
-    OrganizationOrgIdClientsRouteRouteChildren,
-  )
-
-interface OrganizationOrgIdTemplatesRouteRouteChildren {
-  OrganizationOrgIdTemplatesNewRoute: typeof OrganizationOrgIdTemplatesNewRoute
-  OrganizationOrgIdTemplatesIndexRoute: typeof OrganizationOrgIdTemplatesIndexRoute
-  OrganizationOrgIdTemplatesTemplateIdEditRoute: typeof OrganizationOrgIdTemplatesTemplateIdEditRoute
-}
-
-const OrganizationOrgIdTemplatesRouteRouteChildren: OrganizationOrgIdTemplatesRouteRouteChildren =
-  {
-    OrganizationOrgIdTemplatesNewRoute: OrganizationOrgIdTemplatesNewRoute,
-    OrganizationOrgIdTemplatesIndexRoute: OrganizationOrgIdTemplatesIndexRoute,
-    OrganizationOrgIdTemplatesTemplateIdEditRoute:
-      OrganizationOrgIdTemplatesTemplateIdEditRoute,
-  }
-
-const OrganizationOrgIdTemplatesRouteRouteWithChildren =
-  OrganizationOrgIdTemplatesRouteRoute._addFileChildren(
-    OrganizationOrgIdTemplatesRouteRouteChildren,
-  )
-
-interface OrganizationOrgIdRouteRouteChildren {
-  OrganizationOrgIdClientsRouteRoute: typeof OrganizationOrgIdClientsRouteRouteWithChildren
-  OrganizationOrgIdTemplatesRouteRoute: typeof OrganizationOrgIdTemplatesRouteRouteWithChildren
-  OrganizationOrgIdIndexRoute: typeof OrganizationOrgIdIndexRoute
-}
-
-const OrganizationOrgIdRouteRouteChildren: OrganizationOrgIdRouteRouteChildren =
-  {
-    OrganizationOrgIdClientsRouteRoute:
-      OrganizationOrgIdClientsRouteRouteWithChildren,
-    OrganizationOrgIdTemplatesRouteRoute:
-      OrganizationOrgIdTemplatesRouteRouteWithChildren,
-    OrganizationOrgIdIndexRoute: OrganizationOrgIdIndexRoute,
-  }
-
-const OrganizationOrgIdRouteRouteWithChildren =
-  OrganizationOrgIdRouteRoute._addFileChildren(
-    OrganizationOrgIdRouteRouteChildren,
-  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ForgotPasswordRoute: ForgotPasswordRoute,
-  PricingRoute: PricingRoute,
-  ResetPasswordRoute: ResetPasswordRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
-  StatusRoute: StatusRoute,
-  SupportRoute: SupportRoute,
-  OrganizationOrgIdRouteRoute: OrganizationOrgIdRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

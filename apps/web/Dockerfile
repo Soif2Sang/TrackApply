@@ -9,7 +9,12 @@ RUN npm install
 
 COPY . .
 
+# Build arguments for environment variables
+ARG VITE_SERVER_URL
 ARG VITE_API_URL
+
+# Set environment variables from build arguments
+ENV VITE_SERVER_URL=$VITE_SERVER_URL
 ENV VITE_API_URL=$VITE_API_URL
 
 RUN npm run build

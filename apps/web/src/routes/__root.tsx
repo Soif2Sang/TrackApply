@@ -1,6 +1,3 @@
-import { Navbar1 } from "@/components/navbar";
-import Loader from "@/components/loader";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import type { trpc } from "@/utils/trpc";
 import type { QueryClient } from "@tanstack/react-query";
@@ -15,6 +12,7 @@ import {
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import "../index.css";
+import Loader from "@/components/loader";
 
 export interface RouterAppContext {
   trpc: typeof trpc;
@@ -52,18 +50,10 @@ function RootComponent() {
   return (
     <>
       <HeadContent />
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        disableTransitionOnChange
-        storageKey="vite-ui-theme"
-      >
         <div className="grid grid-rows-[auto_1fr] h-svh bg-background">
-          <Navbar1 />
           {isFetching ? <Loader /> : <Outlet />}
         </div>
         <Toaster richColors />
-      </ThemeProvider>
       <TanStackRouterDevtools position="bottom-left" />
       <ReactQueryDevtools position="bottom" buttonPosition="bottom-right" />
     </>

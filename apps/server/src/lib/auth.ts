@@ -13,12 +13,12 @@ export const auth = betterAuth({
   trustedOrigins: [process.env.CORS_ORIGIN || ""],
   emailAndPassword: {
     enabled: true,
-    // To enable password reset, implement sendResetPassword with your email service
-    // sendResetPassword: async ({ user, url, token }, request) => {
-    //   // Send email with reset link to user.email
-    //   // The url contains the reset token
-    //   console.log("Password reset requested for", user.email, "- URL:", url);
-    // },
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
   },
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL,

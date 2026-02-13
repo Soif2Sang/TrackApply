@@ -8,13 +8,19 @@ services:
         BETTER_AUTH_URL: ${BETTER_AUTH_URL}
         CORS_ORIGIN: ${CORS_ORIGIN}
         DATABASE_URL: ${DATABASE_URL}
+        GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+        PORT: ${PORT:-3002}
     environment:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - CORS_ORIGIN=${CORS_ORIGIN}
       - DATABASE_URL=${DATABASE_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - PORT=${PORT:-3002}
     expose:
-      - 3002
+      - ${PORT:-3002}
     networks:
       - dokploy-network
 
@@ -23,8 +29,10 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
       args:
+        VITE_SERVER_URL: ${VITE_SERVER_URL}
         VITE_API_URL: ${VITE_API_URL}
     environment:
+      - VITE_SERVER_URL=${VITE_SERVER_URL}
       - VITE_API_URL=${VITE_API_URL}
     expose:
       - 81
@@ -34,4 +42,3 @@ services:
 networks:
   dokploy-network:
     external: true
-  
