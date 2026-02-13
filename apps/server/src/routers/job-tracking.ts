@@ -27,7 +27,7 @@ const n8nWebhookPayload = z.object({
   // Classification results from Gemini/n8n
   classification: z.enum(classificationEnum),
   position: z.string().nullable().optional().transform((val) => val === null || val === undefined ? "Unknown Position" : val),
-  company: z.string(),
+  company: z.string().nullable().optional().transform((val) => val === null || val === undefined ? "Unknown Company" : val),
   job_id: z.string().nullable().optional().transform((val) => val === null ? undefined : val),
   confidence: z.string().optional(),
 
@@ -167,30 +167,34 @@ async function findMatchingApplication(
   }
 
   // Strategy 2: Match by exact company + position (normalized)
-  const allApplications = await db.query.jobApplications.findMany({
-    where: eq(jobApplications.userId, userId),
-  });
+  // If company is unknown, we can't reliably match - skip this strategy
+  const isUnknownCompany = !company || company === "Unknown Company";
+  if (!isUnknownCompany) {
+    const allApplications = await db.query.jobApplications.findMany({
+      where: eq(jobApplications.userId, userId),
+    });
 
-  for (const app of allApplications) {
-    const appCompany = normalizeText(app.company);
-    const appPosition = app.position ? normalizeText(app.position) : "";
+    for (const app of allApplications) {
+      const appCompany = normalizeText(app.company);
+      const appPosition = app.position ? normalizeText(app.position) : "";
 
-    // Check for company match (exact or very similar)
-    const companyMatch = 
-      appCompany === normalizedCompany ||
-      appCompany.includes(normalizedCompany) ||
-      normalizedCompany.includes(appCompany);
+      // Check for company match (exact or very similar)
+      const companyMatch = 
+        appCompany === normalizedCompany ||
+        appCompany.includes(normalizedCompany) ||
+        normalizedCompany.includes(appCompany);
 
-    // Check for position match (if position is known)
-    const isUnknownPosition = !position || position === "Unknown Position";
-    const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
-    const positionMatch = isUnknownPosition || isAppPositionUnknown ||
-      appPosition === normalizedPosition ||
-      appPosition.includes(normalizedPosition) ||
-      normalizedPosition.includes(appPosition);
+      // Check for position match (if position is known)
+      const isUnknownPosition = !position || position === "Unknown Position";
+      const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
+      const positionMatch = isUnknownPosition || isAppPositionUnknown ||
+        appPosition === normalizedPosition ||
+        appPosition.includes(normalizedPosition) ||
+        normalizedPosition.includes(appPosition);
 
-    if (companyMatch && positionMatch) {
-      return app;
+      if (companyMatch && positionMatch) {
+        return app;
+      }
     }
   }
 
