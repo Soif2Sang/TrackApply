@@ -5,14 +5,35 @@ import { ZodError } from "zod";
 export const t = initTRPC.context<Context>().create({
   errorFormatter(opts) {
     const { shape, error } = opts;
+    
+    // Create a human-readable message
+    let message = shape.message;
+    let zodError = null;
+    
+    if (error.code === 'BAD_REQUEST' && error.cause instanceof ZodError) {
+      zodError = error.cause.flatten();
+      const fieldErrors = zodError.fieldErrors as Record<string, string[] | undefined>;
+      const errorMessages: string[] = [];
+      
+      for (const [field, errors] of Object.entries(fieldErrors)) {
+        if (errors && Array.isArray(errors) && errors.length > 0) {
+          errorMessages.push(`${field}: ${errors.join(', ')}`);
+        }
+      }
+      
+      if (errorMessages.length > 0) {
+        message = `Validation failed: ${errorMessages.join('; ')}`;
+      }
+    }
+    
     return {
       ...shape,
+      message,
       data: {
         ...shape.data,
-        zodError:
-          error.code === 'BAD_REQUEST' && error.cause instanceof ZodError
-            ? error.cause.flatten()
-            : null,
+        // Only include stack in development
+        stack: process.env.NODE_ENV === 'development' ? shape.data.stack : undefined,
+        zodError,
       },
     };
   },
