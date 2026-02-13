@@ -422,23 +422,33 @@ export const jobTrackingRouter = t.router({
         orderBy: (apps, { desc }) => [desc(apps.updatedAt)],
         with: {
           events: {
-            orderBy: (events, { desc }) => [desc(events.createdAt)],
-            limit: 1,
+            orderBy: (events, { desc }) => [desc(events.date)],
           },
         },
       });
 
-      return applications.map((app) => ({
-        id: app.id,
-        company: app.company,
-        position: app.position,
-        jobId: app.jobId,
-        currentStatus: app.currentStatus,
-        source: app.source,
-        createdAt: app.createdAt,
-        updatedAt: app.updatedAt,
-        latestEvent: app.events[0] || null,
-      }));
+      return applications.map((app) => {
+        // Sort events by date to find earliest and latest
+        const sortedEvents = [...app.events].sort((a, b) => 
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        const earliestEvent = sortedEvents[sortedEvents.length - 1];
+        const latestEvent = sortedEvents[0];
+        
+        return {
+          id: app.id,
+          company: app.company,
+          position: app.position,
+          jobId: app.jobId,
+          currentStatus: app.currentStatus,
+          source: app.source,
+          createdAt: app.createdAt,
+          updatedAt: app.updatedAt,
+          // Use earliest email date as "applied" date, fallback to createdAt
+          appliedAt: earliestEvent ? new Date(earliestEvent.date) : app.createdAt,
+          latestEvent: latestEvent || null,
+        };
+      });
     }),
 
   // Get a single application with all events

@@ -137,7 +137,7 @@ export function JobApplicationsTable() {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {formatDate(app.createdAt)}
+                  {formatDate(app.appliedAt)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {app.latestEvent ? formatDate(app.latestEvent.createdAt) : formatDate(app.createdAt)}

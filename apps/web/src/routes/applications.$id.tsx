@@ -65,6 +65,13 @@ function ApplicationDetailPage() {
     trpc.jobTracking.getApplicationById.queryOptions({ id })
   );
 
+  // Calculate applied date from earliest event
+  const appliedAt = application?.events && application.events.length > 0
+    ? new Date(application.events.reduce((earliest, event) => 
+        new Date(event.date) < new Date(earliest.date) ? event : earliest
+      ).date)
+    : application?.createdAt;
+
   const handleSignOut = async () => {
     try {
       await authClient.signOut();
@@ -229,7 +236,7 @@ function ApplicationDetailPage() {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <span className="font-medium">Applied:</span>
-              <p>{formatDateTime(application.createdAt)}</p>
+              <p>{formatDateTime(appliedAt || application.createdAt)}</p>
             </div>
             <div>
               <span className="font-medium">Last Updated:</span>
