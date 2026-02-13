@@ -236,6 +236,21 @@ export const jobTrackingRouter = t.router({
           application = newApp;
         }
 
+        // Check if event already exists (deduplication)
+        const existingEvent = await db.query.applicationEvents.findFirst({
+          where: eq(applicationEvents.emailId, input.email_id),
+        });
+
+        if (existingEvent) {
+          return {
+            success: true,
+            applicationId: application.id,
+            isNewApplication,
+            status: application.currentStatus,
+            message: `Event already exists for ${input.position} at ${input.company} - skipping duplicate`,
+          };
+        }
+
         // Create event record
         const eventType = input.classification.toLowerCase().replace("_", "_") as (typeof eventTypeEnum)[number];
 

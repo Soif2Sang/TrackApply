@@ -138,88 +138,86 @@ export function JobApplicationsTable() {
 
       <Dialog open={!!selectedAppId} onOpenChange={() => setSelectedAppId(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              {selectedApplication?.company || "Loading..."}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {selectedApplication?.position || "Loading application details..."}
+              {selectedApplication?.jobId && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (ID: {selectedApplication.jobId})
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
           {selectedApplication ? (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  {selectedApplication.company}
-                </DialogTitle>
-                <DialogDescription className="text-base">
-                  {selectedApplication.position}
-                  {selectedApplication.jobId && (
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (ID: {selectedApplication.jobId})
-                    </span>
-                  )}
-                </DialogDescription>
-              </DialogHeader>
+            <div className="space-y-6 mt-4">
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Current Status:</span>
+                <Badge
+                  variant="outline"
+                  className={statusColors[selectedApplication.currentStatus] || "bg-gray-100"}
+                >
+                  {selectedApplication.currentStatus.replace("_", " ").toUpperCase()}
+                </Badge>
+              </div>
 
-              <div className="space-y-6 mt-4">
-                {/* Status Badge */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Current Status:</span>
-                  <Badge
-                    variant="outline"
-                    className={statusColors[selectedApplication.currentStatus] || "bg-gray-100"}
-                  >
-                    {selectedApplication.currentStatus.replace("_", " ").toUpperCase()}
-                  </Badge>
-                </div>
-
-                {/* Timeline */}
-                <div>
-                  <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Email Timeline ({selectedApplication.events.length} emails)
-                  </h3>
-                  <div className="space-y-3">
-                    {selectedApplication.events.map((event: typeof selectedApplication.events[0]) => (
-                      <div
-                        key={event.id}
-                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge
-                                className={classificationColors[event.classification] || "bg-gray-100"}
-                              >
-                                {event.classification.replace("_", " ")}
-                              </Badge>
-                              {event.confidence && (
-                                <span className="text-xs text-muted-foreground">
-                                  {event.confidence} confidence
-                                </span>
-                              )}
-                            </div>
-                            <p className="font-medium text-sm truncate">{event.subject}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              From: {event.from}
-                            </p>
+              {/* Timeline */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Email Timeline ({selectedApplication.events.length} emails)
+                </h3>
+                <div className="space-y-3">
+                  {selectedApplication.events.map((event: typeof selectedApplication.events[0]) => (
+                    <div
+                      key={event.id}
+                      className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge
+                              className={classificationColors[event.classification] || "bg-gray-100"}
+                            >
+                              {event.classification.replace("_", " ")}
+                            </Badge>
+                            {event.confidence && (
+                              <span className="text-xs text-muted-foreground">
+                                {event.confidence} confidence
+                              </span>
+                            )}
                           </div>
-                          <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {formatDateTime(event.date)}
-                            </div>
+                          <p className="font-medium text-sm truncate">{event.subject}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            From: {event.from}
+                          </p>
+                        </div>
+                        <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatDateTime(event.date)}
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Metadata */}
-                <div className="text-xs text-muted-foreground border-t pt-4">
-                  <p>Applied: {formatDateTime(selectedApplication.createdAt)}</p>
-                  <p>Last Updated: {formatDateTime(selectedApplication.updatedAt)}</p>
-                  <p>Source: {selectedApplication.source}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </>
+
+              {/* Metadata */}
+              <div className="text-xs text-muted-foreground border-t pt-4">
+                <p>Applied: {formatDateTime(selectedApplication.createdAt)}</p>
+                <p>Last Updated: {formatDateTime(selectedApplication.updatedAt)}</p>
+                <p>Source: {selectedApplication.source}</p>
+              </div>
+            </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               <Skeleton className="h-6 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
               <div className="space-y-2 mt-4">
