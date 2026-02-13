@@ -29,7 +29,7 @@ const n8nWebhookPayload = z.object({
   classification: z.enum(classificationEnum),
   position: z.string(),
   company: z.string(),
-  job_id: z.string().optional(),
+  job_id: z.string().nullable().optional().transform((val) => val === null ? undefined : val),
   confidence: z.string().optional(),
 
   // Timestamp
