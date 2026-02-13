@@ -65,12 +65,18 @@ function ApplicationDetailPage() {
     trpc.jobTracking.getApplicationById.queryOptions({ id })
   );
 
-  // Calculate applied date from earliest event
+  // Calculate applied date from earliest event and last update from latest event
   const appliedAt = application?.events && application.events.length > 0
     ? new Date(application.events.reduce((earliest, event) => 
         new Date(event.date) < new Date(earliest.date) ? event : earliest
       ).date)
     : application?.createdAt;
+
+  const lastUpdateAt = application?.events && application.events.length > 0
+    ? new Date(application.events.reduce((latest, event) => 
+        new Date(event.date) > new Date(latest.date) ? event : latest
+      ).date)
+    : application?.updatedAt;
 
   const handleSignOut = async () => {
     try {
@@ -240,7 +246,7 @@ function ApplicationDetailPage() {
             </div>
             <div>
               <span className="font-medium">Last Updated:</span>
-              <p>{formatDateTime(application.updatedAt)}</p>
+              <p>{formatDateTime(lastUpdateAt || application.updatedAt)}</p>
             </div>
             <div>
               <span className="font-medium">Source:</span>

@@ -446,6 +446,8 @@ export const jobTrackingRouter = t.router({
           updatedAt: app.updatedAt,
           // Use earliest email date as "applied" date, fallback to createdAt
           appliedAt: earliestEvent ? new Date(earliestEvent.date) : app.createdAt,
+          // Use latest email date as "last update" date
+          lastUpdateAt: latestEvent ? new Date(latestEvent.date) : app.updatedAt,
           latestEvent: latestEvent || null,
         };
       });

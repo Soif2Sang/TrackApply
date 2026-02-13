@@ -13,7 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, Briefcase, ChevronRight, Search, Calendar } from "lucide-react";
+import { Building2, Briefcase, ChevronRight, Calendar, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Status badge color mapping
 const statusColors: Record<string, string> = {
@@ -37,21 +38,31 @@ function formatDate(date: string | Date) {
 
 export function JobApplicationsTable() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filters, setFilters] = useState({
+    company: "",
+    position: "",
+    status: "",
+  });
   
   const { data: applications, isLoading } = useQuery(trpc.jobTracking.getApplications.queryOptions());
 
-  // Filter applications based on search query
+  // Filter applications based on individual column filters
   const filteredApplications = applications?.filter((app) => {
-    if (!searchQuery.trim()) return true;
+    const companyMatch = !filters.company || 
+      app.company.toLowerCase().includes(filters.company.toLowerCase());
+    const positionMatch = !filters.position || 
+      app.position.toLowerCase().includes(filters.position.toLowerCase());
+    const statusMatch = !filters.status || 
+      app.currentStatus.toLowerCase().includes(filters.status.toLowerCase());
     
-    const query = searchQuery.toLowerCase();
-    const companyMatch = app.company.toLowerCase().includes(query);
-    const positionMatch = app.position.toLowerCase().includes(query);
-    const statusMatch = app.currentStatus.toLowerCase().includes(query);
-    
-    return companyMatch || positionMatch || statusMatch;
+    return companyMatch && positionMatch && statusMatch;
   });
+
+  const hasActiveFilters = filters.company || filters.position || filters.status;
+
+  const clearFilters = () => {
+    setFilters({ company: "", position: "", status: "" });
+  };
 
   if (isLoading) {
     return (
@@ -79,38 +90,66 @@ export function JobApplicationsTable() {
 
   return (
     <div className="space-y-4">
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search by company, position, or status..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      {/* Results count */}
-      {searchQuery && (
-        <p className="text-sm text-muted-foreground">
-          Showing {filteredApplications?.length || 0} of {applications.length} applications
-        </p>
+      {/* Clear filters button */}
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {filteredApplications?.length || 0} of {applications.length} applications
+          </p>
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8">
+            <X className="h-4 w-4 mr-1" />
+            Clear filters
+          </Button>
+        </div>
       )}
 
       <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Company</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>
+              <TableHead className="min-w-[200px]">
+                <div className="space-y-1">
+                  <div>Company</div>
+                  <Input
+                    placeholder="Filter company..."
+                    value={filters.company}
+                    onChange={(e) => setFilters({ ...filters, company: e.target.value })}
+                    className="h-7 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </TableHead>
+              <TableHead className="min-w-[200px]">
+                <div className="space-y-1">
+                  <div>Position</div>
+                  <Input
+                    placeholder="Filter position..."
+                    value={filters.position}
+                    onChange={(e) => setFilters({ ...filters, position: e.target.value })}
+                    className="h-7 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </TableHead>
+              <TableHead className="min-w-[150px]">
+                <div className="space-y-1">
+                  <div>Status</div>
+                  <Input
+                    placeholder="Filter status..."
+                    value={filters.status}
+                    onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                    className="h-7 text-xs"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </TableHead>
+              <TableHead className="min-w-[120px]">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   Applied
                 </div>
               </TableHead>
-              <TableHead>Last Update</TableHead>
+              <TableHead className="min-w-[120px]">Last Update</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -140,7 +179,7 @@ export function JobApplicationsTable() {
                   {formatDate(app.appliedAt)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {app.latestEvent ? formatDate(app.latestEvent.createdAt) : formatDate(app.createdAt)}
+                  {formatDate(app.lastUpdateAt)}
                 </TableCell>
                 <TableCell>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -150,7 +189,7 @@ export function JobApplicationsTable() {
             {filteredApplications?.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  No applications match your search
+                  No applications match your filters
                 </TableCell>
               </TableRow>
             )}
