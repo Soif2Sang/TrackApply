@@ -26,7 +26,7 @@ const n8nWebhookPayload = z.object({
 
   // Classification results from Gemini/n8n
   classification: z.enum(classificationEnum),
-  position: z.string().optional().default("Unknown Position"),
+  position: z.string().nullable().optional().transform((val) => val === null || val === undefined ? "Unknown Position" : val),
   company: z.string(),
   job_id: z.string().nullable().optional().transform((val) => val === null ? undefined : val),
   confidence: z.string().optional(),
@@ -173,7 +173,7 @@ async function findMatchingApplication(
 
   for (const app of allApplications) {
     const appCompany = normalizeText(app.company);
-    const appPosition = normalizeText(app.position);
+    const appPosition = app.position ? normalizeText(app.position) : "";
 
     // Check for company match (exact or very similar)
     const companyMatch = 
@@ -182,8 +182,9 @@ async function findMatchingApplication(
       normalizedCompany.includes(appCompany);
 
     // Check for position match (if position is known)
-    const isUnknownPosition = position === "Unknown Position" || !position;
-    const positionMatch = isUnknownPosition ||
+    const isUnknownPosition = !position || position === "Unknown Position";
+    const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
+    const positionMatch = isUnknownPosition || isAppPositionUnknown ||
       appPosition === normalizedPosition ||
       appPosition.includes(normalizedPosition) ||
       normalizedPosition.includes(appPosition);
