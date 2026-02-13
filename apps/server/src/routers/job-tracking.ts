@@ -117,6 +117,25 @@ function determineNewStatus(
   }
 }
 
+// Recalculate status based on most recent event by email date
+async function recalculateStatusFromEvents(
+  applicationId: string
+): Promise<(typeof applicationStatusEnum)[number]> {
+  // Get all events for this application, sorted by email date (newest first)
+  const events = await db.query.applicationEvents.findMany({
+    where: eq(applicationEvents.applicationId, applicationId),
+    orderBy: (events, { desc }) => [desc(events.date)],
+  });
+
+  if (events.length === 0) {
+    return "applied";
+  }
+
+  // Determine status based on the most recent email
+  const mostRecentEvent = events[0];
+  return determineNewStatus(mostRecentEvent.classification);
+}
+
 // Normalize company and position for fuzzy matching
 function normalizeText(text: string): string {
   return text
@@ -203,26 +222,12 @@ export const jobTrackingRouter = t.router({
               company: input.company,
               position: input.position,
               jobId: input.job_id || null,
-              currentStatus: determineNewStatus(input.classification),
+              currentStatus: "applied", // Will be updated after event is created
               source: "email",
             })
             .returning();
 
           application = newApp;
-        } else {
-          // Update existing application status
-          const newStatus = determineNewStatus(
-            input.classification,
-            application.currentStatus
-          );
-
-          await db
-            .update(jobApplications)
-            .set({
-              currentStatus: newStatus,
-              updatedAt: new Date(),
-            })
-            .where(eq(jobApplications.id, application.id));
         }
 
         // Create event record
@@ -242,6 +247,21 @@ export const jobTrackingRouter = t.router({
           confidence: input.confidence || null,
           rawPayload: input as unknown as Record<string, unknown>,
         });
+
+        // Recalculate status based on the most recent email date (not processing order)
+        const recalculatedStatus = await recalculateStatusFromEvents(application.id);
+
+        // Update application status with the recalculated value
+        await db
+          .update(jobApplications)
+          .set({
+            currentStatus: recalculatedStatus,
+            updatedAt: new Date(),
+          })
+          .where(eq(jobApplications.id, application.id));
+
+        // Refresh application with new status
+        application.currentStatus = recalculatedStatus;
 
         return {
           success: true,
