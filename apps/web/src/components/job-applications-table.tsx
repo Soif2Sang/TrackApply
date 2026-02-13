@@ -197,11 +197,6 @@ export function JobApplicationsTable() {
                             <p className="text-xs text-muted-foreground mt-1">
                               From: {event.from}
                             </p>
-                            {event.snippet && (
-                              <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                {event.snippet}
-                              </p>
-                            )}
                           </div>
                           <div className="text-right text-xs text-muted-foreground whitespace-nowrap">
                             <div className="flex items-center gap-1">

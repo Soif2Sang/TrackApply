@@ -58,7 +58,6 @@ export const applicationEvents = pgTable("application_events", {
   from: text("from").notNull(),
   to: text("to").notNull(),
   date: text("date").notNull(),
-  snippet: text("snippet"),
   
   // Classification results
   confidence: text("confidence"),

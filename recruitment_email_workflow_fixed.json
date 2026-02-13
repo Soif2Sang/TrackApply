@@ -1,0 +1,678 @@
+{
+  "name": "Recruitment Email Processor - Gmail",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// UPDATED Extract Gmail Data JavaScript\n// Handles both Gmail trigger and manual Gmail message fetch\n\nlet gmail = $input.first().json;\n\nif (Array.isArray(gmail)) {\n  gmail = gmail[0];\n}\n\nfunction extractEmail(emailObject) {\n  if (!emailObject) return '';\n  if (emailObject.text) return emailObject.text;\n  if (emailObject.value && Array.isArray(emailObject.value) && emailObject.value.length > 0) {\n    const firstValue = emailObject.value[0];\n    if (firstValue.name && firstValue.address) {\n      return `\"${firstValue.name}\" <${firstValue.address}>`;\n    } else if (firstValue.address) {\n      return firstValue.address;\n    }\n  }\n  return String(emailObject);\n}\n\nfunction htmlToText(html) {\n  if (!html) return '';\n  let text = html;\n  text = text.replace(/<br\\s*\\/?>/gi, '\\n');\n  text = text.replace(/<\\/p>/gi, '\\n\\n');\n  text = text.replace(/<\\/div>/gi, '\\n');\n  text = text.replace(/<\\/h[1-6]>/gi, '\\n\\n');\n  text = text.replace(/<\\/li>/gi, '\\n');\n  text = text.replace(/<\\/tr>/gi, '\\n');\n  text = text.replace(/<\\/td>/gi, ' ');\n  text = text.replace(/<[^>]*>/g, '');\n  text = text.replace(/&nbsp;/g, ' ');\n  text = text.replace(/&amp;/g, '&');\n  text = text.replace(/&lt;/g, '<');\n  text = text.replace(/&gt;/g, '>');\n  text = text.replace(/&quot;/g, '\"');\n  text = text.replace(/&#39;/g, \"'\");\n  text = text.replace(/&apos;/g, \"'\");\n  text = text.replace(/[ \\t]+/g, ' ');\n  text = text.replace(/\\n[ \\t]+/g, '\\n');\n  text = text.replace(/[ \\t]+\\n/g, '\\n');\n  text = text.replace(/\\n{3,}/g, '\\n\\n');\n  return text.trim();\n}\n\nfunction decodeBody(parts, mimeType = 'text/plain') {\n  if (!parts) return null;\n  const part = parts.find(p => p.mimeType === mimeType);\n  if (part && part.body && part.body.data) {\n    try {\n      return Buffer.from(part.body.data, 'base64').toString('utf-8');\n    } catch (error) {\n      console.error('Error decoding body:', error);\n      return null;\n    }\n  }\n  return null;\n}\n\nconst subject = gmail.subject || '';\nconst from = extractEmail(gmail.from);\nconst to = extractEmail(gmail.to);\nconst date = gmail.date || '';\nconst messageId = gmail.messageId || gmail.id;\n\nlet bodyText = null;\n\nif (gmail.text) {\n  bodyText = gmail.text;\n} else if (gmail.html) {\n  bodyText = htmlToText(gmail.html);\n} else if (gmail.payload && gmail.payload.parts) {\n  bodyText = decodeBody(gmail.payload.parts, 'text/plain');\n  if (!bodyText) {\n    const htmlBody = decodeBody(gmail.payload.parts, 'text/html');\n    if (htmlBody) {\n      bodyText = htmlToText(htmlBody);\n    }\n  }\n}\n\nif (!bodyText) {\n  bodyText = gmail.snippet || '';\n}\n\nlet labels = [];\nif (Array.isArray(gmail.labels)) {\n  labels = gmail.labels.map(label => {\n    return typeof label === 'string' ? label : (label.name || label.id);\n  });\n} else if (Array.isArray(gmail.labelIds)) {\n  labels = gmail.labelIds;\n}\n\nreturn {\n  email_id: gmail.id,\n  thread_id: gmail.threadId,\n  subject: subject,\n  from: from,\n  to: to,\n  date: date,\n  message_id: messageId,\n  body: bodyText,\n  snippet: gmail.snippet || '',\n  labels: labels,\n  size_estimate: gmail.sizeEstimate,\n  _original_gmail: gmail\n};"
+      },
+      "id": "56f75e4a-fa17-43c6-aa3c-05257ae8bd9d",
+      "name": "Extract Gmail Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1392, 736]
+    },
+    {
+      "parameters": {
+        "jsCode": "const geminiOutput = $input.first().json;\n\nlet geminiResponse;\ntry {\n  let responseText;\n  \n  if (Array.isArray(geminiOutput)) {\n    responseText = geminiOutput[0].content.parts[0].text;\n  } else if (geminiOutput.content && geminiOutput.content.parts) {\n    responseText = geminiOutput.content.parts[0].text;\n  } else {\n    responseText = geminiOutput.text || geminiOutput.response || JSON.stringify(geminiOutput);\n  }\n  \n  responseText = responseText.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\n  geminiResponse = JSON.parse(responseText);\n  \n} catch (error) {\n  console.error('Error parsing Gemini response:', error);\n  geminiResponse = {\n    classification: \"OTHER\",\n    position: null,\n    company: null,\n    job_id: null,\n    confidence: \"low\"\n  };\n}\n\nconst emailData = $('Extract Gmail Data').item.json;\ngeminiResponse.email_id = emailData.email_id;\ngeminiResponse.message_id = emailData.message_id;\n\nreturn geminiResponse;"
+      },
+      "id": "9ecc8935-b53a-4bdf-bccc-0c1efda07228",
+      "name": "Parse Gemini Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-928, 736]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.confidence }}",
+              "operation": "contains",
+              "value2": "low"
+            }
+          ]
+        }
+      },
+      "id": "d386c4e2-f2e7-44e4-8766-a53ddb3b49b7",
+      "name": "Check Confidence",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-176, 160]
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('Merge').item.json.thread_id }}",
+        "labelIds": ["Label_5475704118375161798"]
+      },
+      "id": "797aa0f8-9234-4148-b051-588ee90b465a",
+      "name": "Flag Low Confidence",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [64, 272],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{"mode": "everyMinute"}]
+        },
+        "simple": false,
+        "filters": {
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "id": "98b77935-d0da-4cf9-92cc-605c460d25db",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [-1808, 480],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.classification }}",
+              "operation": "notContains",
+              "value2": "OTHER"
+            }
+          ]
+        }
+      },
+      "id": "858d30db-b43a-4275-aba7-b7292b158f6f",
+      "name": "Filter Recruitment",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-432, 576]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert at analyzing recruitment emails. Classify this email into ONE of these categories:\n\nCATEGORIES:\n1. RECRUITMENT_ACK - Simple acknowledgment that application was received\n2. NEXT_STEP - Invitation to interview, coding challenge, technical assessment, or any next stage\n3. DISAPPROVAL - Rejection, position filled, or application declined\n4. OTHER - Not related to job applications/recruitment\n\nEXTRACTION RULES:\n- For categories 1-3 (recruitment emails), extract:\n  * Position: The job title you applied for\n  * Company: The company name\n  * Job ID: Any reference number, job code, or requisition ID mentioned\n\n- Return null for any field you cannot find\n- Be precise - only extract information explicitly stated in the email\n\nOUTPUT FORMAT (JSON only, no markdown, no explanation):\n{\n  \"classification\": \"RECRUITMENT_ACK|NEXT_STEP|DISAPPROVAL|OTHER\",\n  \"position\": \"job title or null\",\n  \"company\": \"company name or null\",\n  \"job_id\": \"reference number or null\",\n  \"confidence\": \"high|medium|low\"\n}\n\nEMAIL TO ANALYZE:\nSubject: {{ $json.subject }}\nFrom: {{ $json.from }}\nDate: {{ $json.date }}\n\nBody:\n{{ $json.body }}\nsnippet: {{ $json.snippet }}\nRESPOND WITH JSON ONLY"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [-1200, 736],
+      "id": "796d6e89-4193-4653-b97e-7c4a5e959ad1",
+      "name": "Gemini Analysis",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DDLVsTtejvvf04dO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('Merge').item.json.thread_id }}",
+        "labelIds": "={{ \n  $json.classification === 'RECRUITMENT_ACK' ? 'Label_6160038587949181614' : \n  $json.classification === 'NEXT_STEP' ? 'Label_4618630550747372084' : \n  $json.classification === 'DISAPPROVAL' ? 'Label_3660912350703993988' : \n  'Label_6160038587949181614' \n}}"
+      },
+      "id": "f08d570c-c200-4ef6-b161-3d0f01bb4f94",
+      "name": "Set Label",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [-176, 336],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.soif2sang.xyz/trpc/jobTracking.receiveEmail",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "=json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"emailId\": \"{{ $('Merge').item.json.email_id }}\",\n  \"threadId\": \"{{ $('Merge').item.json.thread_id }}\",\n  \"from\": \"{{ $('Merge').item.json.from }}\",\n  \"to\": \"{{ $('Merge').item.json.to }}\",\n  \"subject\": \"{{ $('Merge').item.json.subject }}\",\n  \"snippet\": \"{{ $('Merge').item.json.snippet }}\",\n  \"body\": {{ JSON.stringify($('Merge').item.json.body) }},\n  \"date\": \"{{ $('Merge').item.json.date }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"position\": {{ $json.position ? '\"' + $json.position + '\"' : 'null' }},\n  \"company\": {{ $json.company ? '\"' + $json.company + '\"' : 'null' }},\n  \"jobId\": {{ $json.job_id ? '\"' + $json.job_id + '\"' : 'null' }},\n  \"confidence\": \"{{ $json.confidence }}\"\n}",
+        "options": {}
+      },
+      "id": "f8e0cbd0-0e00-41bc-b3c4-89f47de84e14",
+      "name": "Send to API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-176, 544],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "4LHg98q6OOlmVBtz",
+          "name": "Bearer Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "mergeByKey",
+        "mergeByFields": {
+          "fields": [
+            {
+              "field1": "email_id",
+              "field2": "email_id"
+            }
+          ]
+        },
+        "joinMode": "innerJoin",
+        "options": {}
+      },
+      "id": "4fbeac03-0e31-4a89-8f29-4c54abcbadce",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [-672, 576]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "filters": {
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [-1808, 832],
+      "id": "3784f3ea-6e23-4e6b-8fd9-a05d53dc7738",
+      "name": "Get Messages",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b8db62b4-3cfd-4c73-a46a-d21ac109ff40",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-1600, 832]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Gmail Data for MANUAL path\n\nlet gmail = $input.first().json;\n\nif (Array.isArray(gmail)) {\n  gmail = gmail[0];\n}\n\nfunction extractEmail(emailObject) {\n  if (!emailObject) return '';\n  if (emailObject.text) return emailObject.text;\n  if (emailObject.value && Array.isArray(emailObject.value) && emailObject.value.length > 0) {\n    const firstValue = emailObject.value[0];\n    if (firstValue.name && firstValue.address) {\n      return `\"${firstValue.name}\" <${firstValue.address}>`;\n    } else if (firstValue.address) {\n      return firstValue.address;\n    }\n  }\n  return String(emailObject);\n}\n\nfunction htmlToText(html) {\n  if (!html) return '';\n  let text = html;\n  text = text.replace(/<br\\s*\\/?>/gi, '\\n');\n  text = text.replace(/<\\/p>/gi, '\\n\\n');\n  text = text.replace(/<\\/div>/gi, '\\n');\n  text = text.replace(/<\\/h[1-6]>/gi, '\\n\\n');\n  text = text.replace(/<\\/li>/gi, '\\n');\n  text = text.replace(/<\\/tr>/gi, '\\n');\n  text = text.replace(/<\\/td>/gi, ' ');\n  text = text.replace(/<[^>]*>/g, '');\n  text = text.replace(/&nbsp;/g, ' ');\n  text = text.replace(/&amp;/g, '&');\n  text = text.replace(/&lt;/g, '<');\n  text = text.replace(/&gt;/g, '>');\n  text = text.replace(/&quot;/g, '\"');\n  text = text.replace(/&#39;/g, \"'\");\n  text = text.replace(/&apos;/g, \"'\");\n  text = text.replace(/[ \\t]+/g, ' ');\n  text = text.replace(/\\n[ \\t]+/g, '\\n');\n  text = text.replace(/[ \\t]+\\n/g, '\\n');\n  text = text.replace(/\\n{3,}/g, '\\n\\n');\n  return text.trim();\n}\n\nfunction decodeBody(parts, mimeType = 'text/plain') {\n  if (!parts) return null;\n  const part = parts.find(p => p.mimeType === mimeType);\n  if (part && part.body && part.body.data) {\n    try {\n      return Buffer.from(part.body.data, 'base64').toString('utf-8');\n    } catch (error) {\n      console.error('Error decoding body:', error);\n      return null;\n    }\n  }\n  return null;\n}\n\nconst subject = gmail.subject || '';\nconst from = extractEmail(gmail.from);\nconst to = extractEmail(gmail.to);\nconst date = gmail.date || '';\nconst messageId = gmail.messageId || gmail.id;\n\nlet bodyText = null;\n\nif (gmail.text) {\n  bodyText = gmail.text;\n} else if (gmail.html) {\n  bodyText = htmlToText(gmail.html);\n} else if (gmail.payload && gmail.payload.parts) {\n  bodyText = decodeBody(gmail.payload.parts, 'text/plain');\n  if (!bodyText) {\n    const htmlBody = decodeBody(gmail.payload.parts, 'text/html');\n    if (htmlBody) {\n      bodyText = htmlToText(htmlBody);\n    }\n  }\n}\n\nif (!bodyText) {\n  bodyText = gmail.snippet || '';\n}\n\nlet labels = [];\nif (Array.isArray(gmail.labels)) {\n  labels = gmail.labels.map(label => {\n    return typeof label === 'string' ? label : (label.name || label.id);\n  });\n} else if (Array.isArray(gmail.labelIds)) {\n  labels = gmail.labelIds;\n}\n\nreturn {\n  email_id: gmail.id,\n  thread_id: gmail.threadId,\n  subject: subject,\n  from: from,\n  to: to,\n  date: date,\n  message_id: messageId,\n  body: bodyText,\n  snippet: gmail.snippet || '',\n  labels: labels,\n  size_estimate: gmail.sizeEstimate,\n  _original_gmail: gmail\n};"
+      },
+      "id": "cd8da6c1-4bab-4a03-b0fc-cd0e17a92479",
+      "name": "Extract Data Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1376, 1008]
+    },
+    {
+      "parameters": {
+        "jsCode": "const geminiOutput = $input.first().json;\n\nlet geminiResponse;\ntry {\n  let responseText;\n  \n  if (Array.isArray(geminiOutput)) {\n    responseText = geminiOutput[0].content.parts[0].text;\n  } else if (geminiOutput.content && geminiOutput.content.parts) {\n    responseText = geminiOutput.content.parts[0].text;\n  } else {\n    responseText = geminiOutput.text || geminiOutput.response || JSON.stringify(geminiOutput);\n  }\n  \n  responseText = responseText.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\n  geminiResponse = JSON.parse(responseText);\n  \n} catch (error) {\n  console.error('Error parsing Gemini response:', error);\n  geminiResponse = {\n    classification: \"OTHER\",\n    position: null,\n    company: null,\n    job_id: null,\n    confidence: \"low\"\n  };\n}\n\nconst emailData = $('Extract Data Manual').item.json;\ngeminiResponse.email_id = emailData.email_id;\ngeminiResponse.message_id = emailData.message_id;\n\nreturn geminiResponse;"
+      },
+      "id": "31e70dac-6e91-473e-b37e-16ff1f854ca2",
+      "name": "Parse Gemini Manual",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-736, 1008]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.confidence }}",
+              "operation": "contains",
+              "value2": "low"
+            }
+          ]
+        }
+      },
+      "id": "4e5da1ca-cf62-4fe8-aa5e-53e55a6a2a3b",
+      "name": "Check Confidence Manual",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [128, 880]
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('Merge1').item.json.thread_id }}",
+        "labelIds": ["Label_5475704118375161798"]
+      },
+      "id": "f63fbf6e-3d93-4bf6-8c17-cac9bb817f17",
+      "name": "Flag Low Manual",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [368, 992],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [{"mode": "everyMinute"}]
+        },
+        "simple": false,
+        "filters": {
+          "includeSpamTrash": false
+        },
+        "options": {}
+      },
+      "id": "c54fbf93-2ff8-4064-81d7-cbd19264dc59",
+      "name": "Gmail Trigger Manual",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1,
+      "position": [-1808, 1008],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.classification }}",
+              "operation": "notContains",
+              "value2": "OTHER"
+            }
+          ]
+        }
+      },
+      "id": "97e9fc09-3cd8-4d73-81df-0a9c0dd09af0",
+      "name": "Filter Recruitment Manual",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-128, 1008]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.soif2sang.xyz/trpc/jobTracking.receiveEmail",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "contentType": "=json",
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"emailId\": \"{{ $('Merge1').item.json.email_id }}\",\n  \"threadId\": \"{{ $('Merge1').item.json.thread_id }}\",\n  \"from\": \"{{ $('Merge1').item.json.from }}\",\n  \"to\": \"{{ $('Merge1').item.json.to }}\",\n  \"subject\": \"{{ $('Merge1').item.json.subject }}\",\n  \"snippet\": \"{{ $('Merge1').item.json.snippet }}\",\n  \"body\": {{ JSON.stringify($('Merge1').item.json.body) }},\n  \"date\": \"{{ $('Merge1').item.json.date }}\",\n  \"classification\": \"{{ $json.classification }}\",\n  \"position\": {{ $json.position ? '\"' + $json.position + '\"' : 'null' }},\n  \"company\": {{ $json.company ? '\"' + $json.company + '\"' : 'null' }},\n  \"jobId\": {{ $json.job_id ? '\"' + $json.job_id + '\"' : 'null' }},\n  \"confidence\": \"{{ $json.confidence }}\"\n}",
+        "options": {}
+      },
+      "id": "73d90a91-d7e4-411f-8e97-b9b02ca0f8c0",
+      "name": "Send to API Manual",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [128, 1008],
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "4LHg98q6OOlmVBtz",
+          "name": "Bearer Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "addLabels",
+        "threadId": "={{ $('Merge1').item.json.thread_id }}",
+        "labelIds": "={{ \n  $json.classification === 'RECRUITMENT_ACK' ? 'Label_6160038587949181614' : \n  $json.classification === 'NEXT_STEP' ? 'Label_4618630550747372084' : \n  $json.classification === 'DISAPPROVAL' ? 'Label_3660912350703993988' : \n  'Label_6160038587949181614' \n}}"
+      },
+      "id": "a9a21a13-40c0-47fc-84e0-23c17d1be70d",
+      "name": "Set Label Manual",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [128, 1120],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rYMOKNsnDpnTs045",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "mergeByKey",
+        "mergeByFields": {
+          "fields": [
+            {
+              "field1": "email_id",
+              "field2": "email_id"
+            }
+          ]
+        },
+        "joinMode": "innerJoin",
+        "options": {}
+      },
+      "id": "93a4ee12-80db-4a05-af7c-1e84c23e8e47",
+      "name": "Merge1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [-368, 1008]
+    },
+    {
+      "parameters": {},
+      "id": "ac3ff0f6-9a09-41fa-92ea-f3b18cb38a68",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-2032, 832]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "19dc0e78-6ca6-42cc-9e39-4e27e95aa4c1",
+      "name": "Loop Items Manual",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [-1600, 1008]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an expert at analyzing recruitment emails. Classify this email into ONE of these categories:\n\nCATEGORIES:\n1. RECRUITMENT_ACK - Simple acknowledgment that application was received\n2. NEXT_STEP - Invitation to interview, coding challenge, technical assessment, or any next stage\n3. DISAPPROVAL - Rejection, position filled, or application declined\n4. OTHER - Not related to job applications/recruitment\n\nEXTRACTION RULES:\n- For categories 1-3 (recruitment emails), extract:\n  * Position: The job title you applied for\n  * Company: The company name\n  * Job ID: Any reference number, job code, or requisition ID mentioned\n\n- Return null for any field you cannot find\n- Be precise - only extract information explicitly stated in the email\n\nOUTPUT FORMAT (JSON only, no markdown, no explanation):\n{\n  \"classification\": \"RECRUITMENT_ACK|NEXT_STEP|DISAPPROVAL|OTHER\",\n  \"position\": \"job title or null\",\n  \"company\": \"company name or null\",\n  \"job_id\": \"reference number or null\",\n  \"confidence\": \"high|medium|low\"\n}\n\nEMAIL TO ANALYZE:\nSubject: {{ $json.subject }}\nFrom: {{ $json.from }}\nDate: {{ $json.date }}\n\nBody:\n{{ $json.body }}\nsnippet: {{ $json.snippet }}\nRESPOND WITH JSON ONLY"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [-1088, 1008],
+      "id": "02c82f30-da37-4de9-8b57-81a6a6a33edb",
+      "name": "Gemini Manual",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "DDLVsTtejvvf04dO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Extract Gmail Data": {
+      "main": [
+        [
+          {
+            "node": "Gemini Analysis",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Response": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Check Confidence": {
+      "main": [
+        [
+          {
+            "node": "Flag Low Confidence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Recruitment": {
+      "main": [
+        [
+          {
+            "node": "Set Label",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Confidence",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send to API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Analysis": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Filter Recruitment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Extract Gmail Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Gmail Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Data Manual": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gemini Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Gemini Manual": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Gemini Manual": {
+      "main": [
+        [
+          {
+            "node": "Parse Gemini Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Filter Recruitment Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Recruitment Manual": {
+      "main": [
+        [
+          {
+            "node": "Send to API Manual",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Confidence Manual",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Set Label Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Confidence Manual": {
+      "main": [
+        [
+          {
+            "node": "Flag Low Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger Manual": {
+      "main": [
+        [
+          {
+            "node": "Extract Data Manual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items Manual": {
+      "main": [
+        [
+          {
+            "node": "Extract Data Manual",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "tags": []
+}

@@ -23,7 +23,6 @@ const n8nWebhookPayload = z.object({
   from: z.string(),
   to: z.string(),
   date: z.string(),
-  snippet: z.string().optional(),
 
   // Classification results from Gemini/n8n
   classification: z.enum(classificationEnum),
@@ -240,7 +239,6 @@ export const jobTrackingRouter = t.router({
           from: input.from,
           to: input.to,
           date: input.date,
-          snippet: input.snippet || null,
           confidence: input.confidence || null,
           rawPayload: input as unknown as Record<string, unknown>,
         });
