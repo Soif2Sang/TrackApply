@@ -37,7 +37,5 @@ RUN npm run build
 # Make port available to the world outside this container
 EXPOSE ${PORT:-3002}
 
-RUN npm run db:migrate
-
 # Run the app when the container launches
-CMD [ "npm", "start" ]
+CMD ["sh", "-c", "npm run db:migrate && npm start"]
