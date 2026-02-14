@@ -4,3 +4,4 @@ apps/server/uploads
 .env
 .env.local
 .env.*.local
+*./.env
