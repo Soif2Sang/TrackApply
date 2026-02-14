@@ -29,6 +29,13 @@
       "when": 1770996934154,
       "tag": "0003_greedy_wendigo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1771108302879,
+      "tag": "0004_easy_purple_man",
+      "breakpoints": true
     }
   ]
 }
