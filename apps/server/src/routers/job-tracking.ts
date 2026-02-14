@@ -278,6 +278,38 @@ export const jobTrackingRouter = t.router({
         currentStatus: newStatus,
       };
     }),
+
+  deleteApplication: requireAuth
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      const userId = ctx.session!.user.id;
+
+      const application = await db.query.jobApplications.findFirst({
+        where: and(
+          eq(jobApplications.id, input.id),
+          eq(jobApplications.userId, userId)
+        ),
+      });
+
+      if (!application) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Application not found",
+        });
+      }
+
+      // Delete related events first (cascade)
+      await db
+        .delete(applicationEvents)
+        .where(eq(applicationEvents.applicationId, input.id));
+
+      // Delete the application
+      await db
+        .delete(jobApplications)
+        .where(eq(jobApplications.id, input.id));
+
+      return { success: true };
+    }),
 });
 
 export type JobTrackingRouter = typeof jobTrackingRouter;

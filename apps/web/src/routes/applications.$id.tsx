@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Mail, 
   Calendar, 
@@ -17,7 +25,8 @@ import {
   Check,
   LogOut,
   Loader2,
-  ArrowUpRight
+  ArrowUpRight,
+  Trash2
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
@@ -137,6 +146,7 @@ function ApplicationDetailPage() {
   const [currentStatus, setCurrentStatus] = useState("applied");
   const [eventClassificationDrafts, setEventClassificationDrafts] = useState<Record<string, string>>({});
   const [savingEventId, setSavingEventId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const { data: application, isLoading } = useQuery(
     trpc.jobTracking.getApplicationById.queryOptions({ id })
@@ -192,6 +202,22 @@ function ApplicationDetailPage() {
     },
     onSettled: () => {
       setSavingEventId(null);
+    },
+  });
+
+  const deleteApplicationMutation = useMutation({
+    ...trpc.jobTracking.deleteApplication.mutationOptions(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: trpc.jobTracking.getApplications.queryKey(),
+      });
+      toast.success("Application deleted");
+      navigate({ to: "/" });
+    },
+    onError: (error) => {
+      toast.error("Failed to delete application", {
+        description: error.message,
+      });
     },
   });
 
@@ -258,6 +284,11 @@ function ApplicationDetailPage() {
     } catch (error) {
       toast.error("Failed to sign out");
     }
+  };
+
+  const handleDelete = () => {
+    if (!application) return;
+    deleteApplicationMutation.mutate({ id: application.id });
   };
 
   // Sort events by date (oldest first for timeline)
