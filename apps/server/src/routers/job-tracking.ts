@@ -68,7 +68,7 @@ export const jobTrackingRouter = t.router({
     }
 
     const syncStartedAt = userRecord.applicationSyncLastStartedAt;
-    
+
     // Count jobs created during the current sync session
     // If no sync has started yet, count all jobs
     let result;
@@ -85,6 +85,8 @@ export const jobTrackingRouter = t.router({
           ${syncStartedAt ? sql`AND createdon >= ${syncStartedAt}` : sql``}
       `);
     } catch (error) {
+      console.log("Error fetching job stats:", error);
+      
       const errorCode = (error as { code?: string })?.code;
       if (errorCode === "42P01") {
         return {
