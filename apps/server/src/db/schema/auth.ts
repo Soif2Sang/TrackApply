@@ -8,6 +8,13 @@ export const user = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
+  
+  // Gmail OAuth tokens for email processing
+  gmailRefreshToken: text("gmail_refresh_token"),
+  gmailAccessToken: text("gmail_access_token"),
+  gmailTokenExpiry: timestamp("gmail_token_expiry"),
+  gmailConnected: boolean("gmail_connected").default(false),
+  lastEmailSync: timestamp("last_email_sync"),
 });
 
 export const session = pgTable("session", {

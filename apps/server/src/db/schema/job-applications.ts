@@ -68,21 +68,6 @@ export const applicationEvents = pgTable("application_events", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// API keys for n8n webhook authentication
-export const apiKeys = pgTable("api_keys", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  name: text("name").notNull(),
-  keyHash: text("key_hash").notNull(), // Store hashed version
-  keyPrefix: text("key_prefix").notNull(), // First 8 chars for identification
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  isActive: boolean("is_active").default(true).notNull(),
-  lastUsedAt: timestamp("last_used_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  expiresAt: timestamp("expires_at"),
-});
-
 // User notes on applications
 export const applicationNotes = pgTable("application_notes", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -108,13 +93,6 @@ export const applicationEventsRelations = relations(applicationEvents, ({ one })
   application: one(jobApplications, {
     fields: [applicationEvents.applicationId],
     references: [jobApplications.id],
-  }),
-}));
-
-export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
-  user: one(user, {
-    fields: [apiKeys.userId],
-    references: [user.id],
   }),
 }));
 
