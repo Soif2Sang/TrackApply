@@ -98,6 +98,14 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
     let page = 0;
     let queued = 0;
 
+    // Mark sync as started
+    await db
+      .update(user)
+      .set({ 
+        applicationSyncLastStartedAt: new Date(),
+      })
+      .where(eq(user.id, userId));
+
     do {
       const messages = await listMessages(userId, query, {
         pageToken: nextPageToken,
@@ -131,10 +139,18 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
       nextPageToken = messages.data.nextPageToken || undefined;
     } while (nextPageToken);
 
-    // Update last sync timestamp
+    // Update sync timestamps and total count
+    const now = new Date();
+    const earliestDate = userRecord.applicationSyncHistoryEarliestDate 
+      ? (fromDate < userRecord.applicationSyncHistoryEarliestDate ? fromDate : userRecord.applicationSyncHistoryEarliestDate)
+      : fromDate;
+    
     await db
       .update(user)
-      .set({ lastEmailSync: new Date() })
+      .set({ 
+        applicationSyncLastCompletedAt: now,
+        applicationSyncHistoryEarliestDate: earliestDate,
+      })
       .where(eq(user.id, userId));
 
     console.log(`✅ Queued ${queued} emails for processing across ${page} page(s)`);

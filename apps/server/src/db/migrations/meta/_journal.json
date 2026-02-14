@@ -36,6 +36,13 @@
       "when": 1771108302879,
       "tag": "0004_easy_purple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1771112855731,
+      "tag": "0005_careful_absorbing_man",
+      "breakpoints": true
     }
   ]
 }

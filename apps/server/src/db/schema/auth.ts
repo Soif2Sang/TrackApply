@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, serial, integer } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -14,7 +14,11 @@ export const user = pgTable("user", {
   gmailAccessToken: text("gmail_access_token"),
   gmailTokenExpiry: timestamp("gmail_token_expiry"),
   gmailConnected: boolean("gmail_connected").default(false),
-  lastEmailSync: timestamp("last_email_sync"),
+  
+  // Application sync tracking
+  applicationSyncLastCompletedAt: timestamp("application_sync_last_completed_at"),
+  applicationSyncHistoryEarliestDate: timestamp("application_sync_history_earliest_date"),
+  applicationSyncLastStartedAt: timestamp("application_sync_last_started_at"),
   
   // Gmail push notification watch
   gmailWatchExpiration: timestamp("gmail_watch_expiration"),

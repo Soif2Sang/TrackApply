@@ -7,6 +7,7 @@ import {
   classificationEnum,
   eventTypeEnum,
 } from "../db/schema/job-applications";
+import { user } from "../db/schema/auth";
 import { eq, and, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { t } from "../lib/trpc";
@@ -53,24 +54,55 @@ export const jobTrackingRouter = t.router({
   getAnalyzeQueueStats: requireAuth.query(async ({ ctx }) => {
     const userId = ctx.session!.user.id;
 
+    // Get user sync metadata
+    const userRecord = await db.query.user.findFirst({
+      where: eq(user.id, userId),
+    });
+
+    if (!userRecord) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    const syncStartedAt = userRecord.applicationSyncLastStartedAt;
+
+    // Count jobs created during the current sync session
+    // If no sync has started yet, count all jobs
     const result = await db.execute(sql`
       SELECT
         COUNT(*) FILTER (WHERE state IN ('created', 'retry'))::int AS pending,
         COUNT(*) FILTER (WHERE state = 'active')::int AS active,
-        COUNT(*) FILTER (WHERE state IN ('created', 'retry', 'active'))::int AS total
+        COUNT(*) FILTER (WHERE state = 'completed')::int AS completed,
+        COUNT(*) FILTER (WHERE state = 'failed')::int AS failed
       FROM public.job
-      WHERE name = 'analyze-content'
+      WHERE name = 'process-email'
         AND data->>'userId' = ${userId}
+        ${syncStartedAt ? sql`AND createdon >= ${syncStartedAt}` : sql``}
     `);
 
     const row = result.rows[0] as
-      | { pending?: number; active?: number; total?: number }
+      | { pending?: number; active?: number; completed?: number; failed?: number }
       | undefined;
 
+    const pending = Number(row?.pending || 0);
+    const active = Number(row?.active || 0);
+    const completed = Number(row?.completed || 0);
+    const failed = Number(row?.failed || 0);
+    const processed = completed + failed;
+    const remaining = pending + active;
+    const total = pending + active + completed + failed;
+
     return {
-      pending: Number(row?.pending || 0),
-      active: Number(row?.active || 0),
-      total: Number(row?.total || 0),
+      total,
+      completed,
+      failed,
+      processed,
+      pending,
+      active,
+      remaining,
+      syncStartedAt: syncStartedAt?.toISOString() || null,
     };
   }),
 

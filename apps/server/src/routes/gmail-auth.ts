@@ -47,7 +47,8 @@ gmailAuth.get("/status", async (c) => {
 
   return c.json({
     connected: Boolean(userRecord.gmailConnected && userRecord.gmailRefreshToken),
-    lastEmailSync: userRecord.lastEmailSync,
+    applicationSyncLastCompletedAt: userRecord.applicationSyncLastCompletedAt,
+    applicationSyncHistoryEarliestDate: userRecord.applicationSyncHistoryEarliestDate,
   });
 });
 

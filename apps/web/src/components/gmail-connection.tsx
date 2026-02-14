@@ -1,14 +1,32 @@
 import { useEffect, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Mail, ArrowRight, Loader2, LogOut } from "lucide-react";
+import { Mail, ArrowRight, Loader2, LogOut, Clock } from "lucide-react";
 import { toast } from "sonner";
+
+function formatRelativeDate(dateString: string | null | undefined) {
+  if (!dateString) return "Never";
+  
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+  return `${Math.floor(diffDays / 365)} years ago`;
+}
 
 export function GmailConnection() {
   const { data: session } = authClient.useSession();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [applicationSyncLastCompletedAt, setApplicationSyncLastCompletedAt] = useState<string | null>(null);
+  const [applicationSyncHistoryEarliestDate, setApplicationSyncHistoryEarliestDate] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -29,6 +47,8 @@ export function GmailConnection() {
 
         const data = await response.json();
         setIsConnected(Boolean(data.connected));
+        setApplicationSyncLastCompletedAt(data.applicationSyncLastCompletedAt);
+        setApplicationSyncHistoryEarliestDate(data.applicationSyncHistoryEarliestDate);
       } catch {
         setIsConnected(false);
       } finally {
@@ -92,6 +112,8 @@ export function GmailConnection() {
 
       if (response.ok) {
         setIsConnected(false);
+        setApplicationSyncLastCompletedAt(null);
+        setApplicationSyncHistoryEarliestDate(null);
         toast.success("Gmail disconnected");
       } else {
         throw new Error("Failed to disconnect");
@@ -129,6 +151,17 @@ export function GmailConnection() {
                 ? "Emails will be automatically synced" 
                 : "Connect to sync job application emails"}
             </p>
+            {isConnected && (
+              <div className="flex items-center gap-3 mt-1.5">
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                  <Clock className="h-3 w-3" />
+                  <span>Last: {formatRelativeDate(applicationSyncLastCompletedAt)}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-mono">
+                  <span>From: {formatRelativeDate(applicationSyncHistoryEarliestDate)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
