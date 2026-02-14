@@ -223,6 +223,78 @@ export async function listMessages(
   });
 }
 
+// Start Gmail watch for push notifications
+export async function startGmailWatch(userId: string) {
+  const gmail = await getGmailClient(userId);
+  const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+  
+  if (!projectId) {
+    console.error("❌ GOOGLE_CLOUD_PROJECT_ID not set");
+    throw new Error("GOOGLE_CLOUD_PROJECT_ID not configured");
+  }
+
+  const topicName = `projects/${projectId}/topics/gmail-notifications`;
+
+  try {
+    const response = await gmail.users.watch({
+      userId: "me",
+      requestBody: {
+        topicName: topicName,
+        labelIds: ["INBOX"],
+        labelFilterAction: "include",
+      },
+    });
+
+    console.log(`✅ Gmail watch started for user ${userId}`);
+    console.log(`   History ID: ${response.data.historyId}`);
+    console.log(`   Expiration: ${response.data.expiration ? new Date(parseInt(response.data.expiration)).toISOString() : 'N/A'}`);
+
+    // Store watch expiration in database
+    await db
+      .update(user)
+      .set({
+        gmailWatchExpiration: response.data.expiration 
+          ? new Date(parseInt(response.data.expiration)) 
+          : null,
+        gmailWatchHistoryId: response.data.historyId?.toString() || null,
+      })
+      .where(eq(user.id, userId));
+
+    return {
+      historyId: response.data.historyId,
+      expiration: response.data.expiration,
+    };
+  } catch (error: any) {
+    console.error(`❌ Failed to start Gmail watch for user ${userId}:`, error.message);
+    throw error;
+  }
+}
+
+// Stop Gmail watch (call when disconnecting)
+export async function stopGmailWatch(userId: string) {
+  const gmail = await getGmailClient(userId);
+
+  try {
+    await gmail.users.stop({
+      userId: "me",
+    });
+
+    console.log(`✅ Gmail watch stopped for user ${userId}`);
+
+    // Clear watch data from database
+    await db
+      .update(user)
+      .set({
+        gmailWatchExpiration: null,
+        gmailWatchHistoryId: null,
+      })
+      .where(eq(user.id, userId));
+  } catch (error: any) {
+    console.error(`❌ Failed to stop Gmail watch for user ${userId}:`, error.message);
+    // Don't throw - we still want to disconnect even if stop fails
+  }
+}
+
 // Helper to extract email data from Gmail message
 export function extractEmailData(message: any) {
   const headers = message.payload?.headers || [];

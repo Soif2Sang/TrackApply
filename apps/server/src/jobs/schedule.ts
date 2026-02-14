@@ -1,8 +1,8 @@
 import { schedule } from "node-cron";
 import { db } from "../db";
 import { user } from "../db/schema/auth";
-import { eq } from "drizzle-orm";
-import { listMessages } from "../services/gmail-service";
+import { eq, lt } from "drizzle-orm";
+import { listMessages, startGmailWatch } from "../services/gmail-service";
 import { boss, JOB_NAMES } from "./pgboss";
 
 // Cron job to sync old emails for all users with Gmail connected
@@ -34,6 +34,42 @@ export function startCronJobs() {
       console.log("✅ Daily email sync completed");
     } catch (error) {
       console.error("❌ Error in daily sync cron:", error);
+    }
+  });
+
+  // Daily watch renewal - renew watches expiring within next 24 hours
+  schedule("0 3 * * *", async () => {
+    console.log("🔄 Starting Gmail watch renewal...");
+    
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      // Get all users with Gmail connected and watch expiring soon
+      const users = await db.query.user.findMany({
+        where: eq(user.gmailConnected, true),
+      });
+
+      const usersToRenew = users.filter(u => {
+        if (!u.gmailWatchExpiration) return true; // No watch, need to create one
+        return u.gmailWatchExpiration < tomorrow; // Expires within 24h
+      });
+
+      console.log(`📧 Found ${usersToRenew.length} users needing watch renewal`);
+
+      for (const u of usersToRenew) {
+        try {
+          await startGmailWatch(u.id);
+          console.log(`✅ Renewed Gmail watch for user ${u.id}`);
+        } catch (error) {
+          console.error(`❌ Error renewing watch for user ${u.id}:`, error);
+          // Continue with next user
+        }
+      }
+
+      console.log("✅ Gmail watch renewal completed");
+    } catch (error) {
+      console.error("❌ Error in watch renewal cron:", error);
     }
   });
 

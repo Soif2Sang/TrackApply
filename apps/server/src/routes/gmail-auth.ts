@@ -3,6 +3,7 @@ import { google } from "googleapis";
 import { db } from "../db";
 import { user } from "../db/schema/auth";
 import { eq } from "drizzle-orm";
+import { startGmailWatch, stopGmailWatch } from "../services/gmail-service";
 
 const gmailAuth = new Hono();
 
@@ -112,6 +113,14 @@ gmailAuth.get("/callback", async (c) => {
 
     console.log(`✅ Gmail connected successfully for user ${userId}`);
     
+    // Start Gmail watch for push notifications
+    try {
+      await startGmailWatch(userId);
+    } catch (watchError) {
+      console.error(`⚠️ Failed to start Gmail watch for user ${userId}:`, watchError);
+      // Don't fail the connection if watch fails, just log it
+    }
+    
     // Redirect back to app with success
     return c.redirect(`${process.env.CORS_ORIGIN}/?gmail_connected=true`);
   } catch (error) {
@@ -129,6 +138,14 @@ gmailAuth.post("/disconnect", async (c) => {
   }
 
   try {
+    // Stop Gmail watch first
+    try {
+      await stopGmailWatch(userId);
+    } catch (stopError) {
+      console.warn(`⚠️ Failed to stop Gmail watch for user ${userId}:`, stopError);
+      // Continue with disconnect even if stop fails
+    }
+
     // Remove tokens from database
     await db
       .update(user)
@@ -137,6 +154,8 @@ gmailAuth.post("/disconnect", async (c) => {
         gmailAccessToken: null,
         gmailTokenExpiry: null,
         gmailConnected: false,
+        gmailWatchExpiration: null,
+        gmailWatchHistoryId: null,
       })
       .where(eq(user.id, userId));
 

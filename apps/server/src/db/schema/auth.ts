@@ -15,6 +15,10 @@ export const user = pgTable("user", {
   gmailTokenExpiry: timestamp("gmail_token_expiry"),
   gmailConnected: boolean("gmail_connected").default(false),
   lastEmailSync: timestamp("last_email_sync"),
+  
+  // Gmail push notification watch
+  gmailWatchExpiration: timestamp("gmail_watch_expiration"),
+  gmailWatchHistoryId: text("gmail_watch_history_id"),
 });
 
 export const session = pgTable("session", {
