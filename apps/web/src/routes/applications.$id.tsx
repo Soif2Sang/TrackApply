@@ -452,7 +452,7 @@ function ApplicationDetailPage() {
             </div>
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 flex items-center gap-3">
             <Button 
               onClick={handleSaveApplication} 
               disabled={updateApplicationMutation.isPending}
@@ -468,8 +468,69 @@ function ApplicationDetailPage() {
                 "Save Application"
               )}
             </Button>
+            
+            <Button 
+              onClick={() => setShowDeleteDialog(true)}
+              disabled={deleteApplicationMutation.isPending}
+              size="sm"
+              variant="outline"
+              className="gap-2 border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-400"
+            >
+              {deleteApplicationMutation.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </>
+              )}
+            </Button>
           </div>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="bg-card border-border">
+            <DialogHeader>
+              <DialogTitle className="text-foreground">Delete Application</DialogTitle>
+              <DialogDescription className="text-muted-foreground">
+                Are you sure you want to delete this application for <span className="text-foreground font-medium">{application?.company}</span>? 
+                This action cannot be undone and will remove all associated emails and events.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDeleteDialog(false)}
+                size="sm"
+                className="border-border text-foreground hover:bg-muted"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDelete}
+                disabled={deleteApplicationMutation.isPending}
+                size="sm"
+                className="gap-2 bg-red-500 text-white hover:bg-red-600"
+              >
+                {deleteApplicationMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete Application
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Email Timeline */}
         <div className="mb-8">
