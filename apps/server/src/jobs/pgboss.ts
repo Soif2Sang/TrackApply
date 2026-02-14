@@ -10,10 +10,12 @@ import { getLabelForClassification as _getLabelForClassification } from "../serv
 
 export { _getLabelForClassification as getLabelForClassification };
 
+export const PG_BOSS_SCHEMA = "pgboss";
+
 // Initialize PgBoss with database connection
 export const boss = new PgBoss({
   connectionString: process.env.DATABASE_URL || "",
-  schema: "public",
+  schema: PG_BOSS_SCHEMA,
 });
 
 // Job names

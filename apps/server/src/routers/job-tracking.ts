@@ -12,6 +12,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { t } from "../lib/trpc";
 import { triggerManualSync } from "../jobs/schedule";
+import { PG_BOSS_SCHEMA } from "../jobs/pgboss";
 
 function mapClassificationToEventType(
   classification: (typeof classificationEnum)[number]
@@ -67,20 +68,39 @@ export const jobTrackingRouter = t.router({
     }
 
     const syncStartedAt = userRecord.applicationSyncLastStartedAt;
-
+    
     // Count jobs created during the current sync session
     // If no sync has started yet, count all jobs
-    const result = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE state IN ('created', 'retry'))::int AS pending,
-        COUNT(*) FILTER (WHERE state = 'active')::int AS active,
-        COUNT(*) FILTER (WHERE state = 'completed')::int AS completed,
-        COUNT(*) FILTER (WHERE state = 'failed')::int AS failed
-      FROM pgboss.job
-      WHERE name = 'process-email'
-        AND data->>'userId' = ${userId}
-        ${syncStartedAt ? sql`AND createdon >= ${syncStartedAt}` : sql``}
-    `);
+    let result;
+    try {
+      result = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE state IN ('created', 'retry'))::int AS pending,
+          COUNT(*) FILTER (WHERE state = 'active')::int AS active,
+          COUNT(*) FILTER (WHERE state = 'completed')::int AS completed,
+          COUNT(*) FILTER (WHERE state = 'failed')::int AS failed
+        FROM pgboss.job
+        WHERE name = 'process-email'
+          AND data->>'userId' = ${userId}
+          ${syncStartedAt ? sql`AND createdon >= ${syncStartedAt}` : sql``}
+      `);
+    } catch (error) {
+      const errorCode = (error as { code?: string })?.code;
+      if (errorCode === "42P01") {
+        return {
+          total: 0,
+          completed: 0,
+          failed: 0,
+          processed: 0,
+          pending: 0,
+          active: 0,
+          remaining: 0,
+          syncStartedAt: syncStartedAt?.toISOString() || null,
+        };
+      }
+
+      throw error;
+    }
 
     const row = result.rows[0] as
       | { pending?: number; active?: number; completed?: number; failed?: number }
