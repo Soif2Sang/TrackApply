@@ -11,9 +11,9 @@ export const statusConfig: Record<
   },
   acknowledged: {
     label: "Acknowledged",
-    dotClass: "bg-sky-400",
-    bgClass: "bg-sky-400/10 border-sky-400/20",
-    textClass: "text-sky-400",
+    dotClass: "bg-blue-400",
+    bgClass: "bg-blue-400/10 border-blue-400/20",
+    textClass: "text-blue-400",
   },
   screening: {
     label: "Screening",

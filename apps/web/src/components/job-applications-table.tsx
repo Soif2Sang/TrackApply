@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/utils/trpc";
@@ -10,10 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChevronRight, Search, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRight, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { StatusBadge } from "./status-badge";
 
 function formatDate(date: string | Date) {
@@ -24,43 +22,101 @@ function formatDate(date: string | Date) {
   });
 }
 
-export function JobApplicationsTable() {
+function formatRelative(date: string | Date) {
+  const d = new Date(date);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days}d ago`;
+  if (days < 30) return `${Math.floor(days / 7)}w ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+type SortField = "company" | "position" | "status" | "appliedDate" | "lastUpdate";
+type SortDirection = "asc" | "desc";
+
+interface JobApplicationsTableProps {
+  searchQuery?: string;
+  statusFilter?: string[];
+}
+
+export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: JobApplicationsTableProps) {
   const navigate = useNavigate();
-  const [filters, setFilters] = useState({
-    company: "",
-    position: "",
-    status: "",
-  });
+  const [sortField, setSortField] = useState<SortField>("lastUpdate");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   
   const { data: applications, isLoading } = useQuery(trpc.jobTracking.getApplications.queryOptions());
 
-  // Filter applications based on individual column filters
-  const filteredApplications = applications?.filter((app) => {
-    const companyMatch = !filters.company || 
-      app.company.toLowerCase().includes(filters.company.toLowerCase());
-    const positionMatch = !filters.position || 
-      app.position.toLowerCase().includes(filters.position.toLowerCase());
-    const statusMatch = !filters.status || 
-      app.currentStatus.toLowerCase().includes(filters.status.toLowerCase());
-    
-    return companyMatch && positionMatch && statusMatch;
-  });
-
-  const hasActiveFilters = filters.company || filters.position || filters.status;
-
-  const clearFilters = () => {
-    setFilters({ company: "", position: "", status: "" });
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
+      setSortDirection(field === "lastUpdate" || field === "appliedDate" ? "desc" : "asc");
+    }
   };
+
+  const SortIcon = ({ field }: { field: SortField }) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-3 w-3 opacity-0 group-hover/sort:opacity-100 transition-opacity ml-1 inline" />;
+    }
+    return sortDirection === "asc" ? (
+      <ArrowUp className="h-3 w-3 text-accent ml-1 inline" />
+    ) : (
+      <ArrowDown className="h-3 w-3 text-accent ml-1 inline" />
+    );
+  };
+
+  const filteredApplications = useMemo(() => {
+    if (!applications) return [];
+    
+    let result = applications.filter((app) => {
+      const matchesSearch = !searchQuery || 
+        app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.position.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(app.currentStatus);
+      
+      return matchesSearch && matchesStatus;
+    });
+
+    result.sort((a, b) => {
+      let cmp = 0;
+      switch (sortField) {
+        case "company":
+          cmp = a.company.localeCompare(b.company);
+          break;
+        case "position":
+          cmp = a.position.localeCompare(b.position);
+          break;
+        case "status":
+          cmp = a.currentStatus.localeCompare(b.currentStatus);
+          break;
+        case "appliedDate":
+          cmp = new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime();
+          break;
+        case "lastUpdate":
+          cmp = new Date(a.lastUpdateAt).getTime() - new Date(b.lastUpdateAt).getTime();
+          break;
+      }
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [applications, searchQuery, statusFilter, sortField, sortDirection]);
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="rounded-lg border border-border bg-card p-6">
-          <Skeleton className="h-8 w-full mb-4" />
+      <div className="rounded-lg border border-border bg-card">
+        <div className="p-4 space-y-3">
+          <Skeleton className="h-8 w-full" />
           <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-12 w-full mt-2" />
-          <Skeleton className="h-12 w-full mt-2" />
-          <Skeleton className="h-12 w-full mt-2" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
         </div>
       </div>
     );
@@ -69,10 +125,8 @@ export function JobApplicationsTable() {
   if (!applications || applications.length === 0) {
     return (
       <div className="text-center py-16 border rounded-lg bg-card">
-        <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="h-10 w-10 text-primary/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
+        <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+          <Search className="h-10 w-10 text-muted-foreground" />
         </div>
         <h3 className="text-xl font-semibold text-foreground mb-2">No job applications yet</h3>
         <p className="text-muted-foreground max-w-md mx-auto">
@@ -83,110 +137,94 @@ export function JobApplicationsTable() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Filters bar */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-[280px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <Input
-            placeholder="Filter by company..."
-            value={filters.company}
-            onChange={(e) => setFilters({ ...filters, company: e.target.value })}
-            className="pl-9 h-9 text-sm bg-card border-border"
-          />
-        </div>
-        <div className="relative flex-1 min-w-[200px] max-w-[280px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <Input
-            placeholder="Filter by position..."
-            value={filters.position}
-            onChange={(e) => setFilters({ ...filters, position: e.target.value })}
-            className="pl-9 h-9 text-sm bg-card border-border"
-          />
-        </div>
-        <div className="relative flex-1 min-w-[150px] max-w-[200px]">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
-          <Input
-            placeholder="Filter by status..."
-            value={filters.status}
-            onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-            className="pl-9 h-9 text-sm bg-card border-border"
-          />
-        </div>
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-            <X className="h-4 w-4 mr-1.5" />
-            Clear
-          </Button>
-        )}
-        <div className="ml-auto text-sm text-muted-foreground">
-          {filteredApplications?.length || 0} applications
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground font-medium">Company</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Position</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Status</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Applied</TableHead>
-              <TableHead className="text-muted-foreground font-medium">Last Update</TableHead>
-              <TableHead className="w-10">
-                <span className="sr-only">Navigate</span>
-              </TableHead>
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow className="border-border hover:bg-transparent">
+            <TableHead 
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider cursor-pointer group/sort"
+              onClick={() => handleSort("company")}
+            >
+              <span className="flex items-center">
+                Company <SortIcon field="company" />
+              </span>
+            </TableHead>
+            <TableHead 
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider max-w-[320px] w-[320px] cursor-pointer group/sort"
+              onClick={() => handleSort("position")}
+            >
+              <span className="flex items-center">
+                Position <SortIcon field="position" />
+              </span>
+            </TableHead>
+            <TableHead 
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider cursor-pointer group/sort"
+              onClick={() => handleSort("status")}
+            >
+              <span className="flex items-center">
+                Status <SortIcon field="status" />
+              </span>
+            </TableHead>
+            <TableHead 
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider hidden sm:table-cell cursor-pointer group/sort"
+              onClick={() => handleSort("appliedDate")}
+            >
+              <span className="flex items-center">
+                Applied <SortIcon field="appliedDate" />
+              </span>
+            </TableHead>
+            <TableHead 
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider text-right cursor-pointer group/sort"
+              onClick={() => handleSort("lastUpdate")}
+            >
+              <span className="flex items-center justify-end">
+                Last Update <SortIcon field="lastUpdate" />
+              </span>
+            </TableHead>
+            <TableHead className="w-8">
+              <span className="sr-only">Navigate</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {filteredApplications.length === 0 ? (
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={6} className="h-32 text-center text-sm text-muted-foreground font-mono">
+                No applications match your filters
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredApplications?.map((app) => (
+          ) : (
+            filteredApplications.map((app) => (
               <TableRow
                 key={app.id}
-                className="cursor-pointer border-border transition-colors hover:bg-secondary/50"
+                className="cursor-pointer border-border group transition-colors hover:bg-muted/50"
                 onClick={() => navigate({ to: "/applications/$id", params: { id: app.id } })}
-                role="link"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    navigate({ to: "/applications/$id", params: { id: app.id } });
-                  }
-                }}
               >
                 <TableCell className="font-medium text-foreground">
                   {app.company}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground text-sm max-w-[320px] truncate">
                   {app.position}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={app.currentStatus} />
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground text-sm font-mono hidden sm:table-cell">
                   {formatDate(app.appliedAt)}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {formatDate(app.lastUpdateAt)}
+                <TableCell className="text-muted-foreground text-sm font-mono text-right">
+                  <span title={formatDate(app.lastUpdateAt)}>
+                    {formatRelative(app.lastUpdateAt)}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                </TableCell>
-              </TableRow>
-            ))}
-            {filteredApplications?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
-                  <div className="flex flex-col items-center gap-2">
-                    <Search className="h-8 w-8 text-muted-foreground/40" />
-                    <p>No applications match your filters</p>
-                  </div>
+                <TableCell className="pr-4">
+                  <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            ))
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,20 +1,57 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { JobApplicationsTable } from "@/components/job-applications-table";
-import { ApiKeyManager } from "@/components/api-key-manager";
+import { EmailSyncButton } from "@/components/email-sync-button";
+import { GmailConnection } from "@/components/gmail-connection";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Briefcase, Key, LogOut, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Briefcase, LogOut, Loader2, Zap, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { StatCardsWithData } from "@/components/stat-cards";
+import { StatsBar } from "@/components/stats-bar";
+import { useQuery } from "@tanstack/react-query";
+import { trpc } from "@/utils/trpc";
+import { useState, useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
 });
 
+const ALL_STATUSES = ["applied", "acknowledged", "screening", "interview", "technical", "offer", "rejected", "withdrawn"] as const;
+
 function HomeComponent() {
   const navigate = useNavigate();
   const { data: session, isPending } = authClient.useSession();
+  const { data: applications } = useQuery(trpc.jobTracking.getApplications.queryOptions());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeStatuses, setActiveStatuses] = useState<Set<string>>(new Set());
+
+  const statusCounts = useMemo(() => {
+    if (!applications) return {} as Record<string, number>;
+    return ALL_STATUSES.reduce((acc, status) => {
+      acc[status] = applications.filter((app) => app.currentStatus === status).length;
+      return acc;
+    }, {} as Record<string, number>);
+  }, [applications]);
+
+  const toggleStatus = (status: string) => {
+    setActiveStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) {
+        next.delete(status);
+      } else {
+        next.add(status);
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setActiveStatuses(new Set());
+  };
+
+  const hasFilters = searchQuery.length > 0 || activeStatuses.size > 0;
 
   const handleGoogleSignIn = async () => {
     try {
@@ -39,7 +76,6 @@ function HomeComponent() {
     }
   };
 
-  // Show loading state
   if (isPending) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -48,16 +84,15 @@ function HomeComponent() {
     );
   }
 
-  // Show sign-in page if not authenticated
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
-            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-xl flex items-center justify-center mb-6 border border-border">
-              <Briefcase className="h-8 w-8 text-primary" />
+            <div className="mx-auto w-16 h-16 bg-muted rounded-xl flex items-center justify-center mb-6 border border-border">
+              <Briefcase className="h-8 w-8 text-foreground" />
             </div>
-            <h1 className="text-2xl font-semibold text-foreground mb-2">Job Application Tracker</h1>
+            <h1 className="text-2xl font-semibold text-foreground mb-2">JobPulse</h1>
             <p className="text-muted-foreground">
               Automatically track your job applications from email responses
             </p>
@@ -65,19 +100,19 @@ function HomeComponent() {
           
           <div className="space-y-3 mb-8">
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-primary">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-foreground">
                 1
               </div>
               <p>Connect your Gmail account via n8n workflow</p>
             </div>
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-primary">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-foreground">
                 2
               </div>
               <p>AI automatically classifies emails (RECRUITMENT_ACK, NEXT_STEP, DISAPPROVAL)</p>
             </div>
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
-              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-primary">
+              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-foreground">
                 3
               </div>
               <p>Track all your applications in one dashboard</p>
@@ -114,91 +149,141 @@ function HomeComponent() {
             </svg>
             Sign in with Google
           </Button>
+          
+          <div className="mt-8 flex justify-center">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground/60 font-mono">
+              <Zap className="h-3 w-3" />
+              <span>
+                Uses Gmail API read-only access. No emails are stored on any server.
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Show job tracker for authenticated users
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background">
-                <Briefcase className="h-4 w-4 text-foreground" />
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <header className="flex flex-col gap-8 mb-10">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-foreground text-xl font-medium tracking-tight">
+                  JobPulse
+                </h1>
+                <span className="flex items-center gap-1.5 text-accent text-xs font-mono">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+                  </span>
+                  Connected
+                </span>
               </div>
-              <div>
-                <h1 className="text-xl font-semibold text-foreground">Job Tracker</h1>
-                <p className="text-sm text-muted-foreground">
-                  Track and manage your job applications
-                </p>
-              </div>
+              <p className="text-muted-foreground text-sm">
+                Track job applications from your Gmail inbox
+              </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-foreground">{session.user.name}</p>
-                <p className="text-xs text-muted-foreground">{session.user.email}</p>
-              </div>
+
+            <div className="flex items-center gap-2">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
+                className="text-muted-foreground hover:text-foreground hover:bg-muted h-9 gap-2 font-mono text-xs"
               >
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
+                <LogOut className="h-3.5 w-3.5" />
+                Disconnect
               </Button>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <Tabs defaultValue="applications" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="applications" className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4" />
-              Applications
-            </TabsTrigger>
-            <TabsTrigger value="api-keys" className="flex items-center gap-2">
-              <Key className="h-4 w-4" />
-              API Keys
-            </TabsTrigger>
-          </TabsList>
+          <section aria-label="Gmail connection">
+            <GmailConnection />
+          </section>
 
-          <TabsContent value="applications" className="space-y-6">
-            {/* Stat Cards */}
-            <section aria-label="Application statistics">
-              <StatCardsWithData />
-            </section>
+          <div className="flex items-center justify-between">
+            <StatsBar applications={applications || []} />
+            <EmailSyncButton />
+          </div>
 
-            {/* Applications List */}
-            <section aria-label="Applications list">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-sm font-medium text-muted-foreground">
-                  All Applications
-                </h2>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  type="text"
+                  placeholder="Search company or role..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-8 bg-secondary border-border text-foreground text-xs font-mono placeholder:text-muted-foreground/60"
+                  aria-label="Search applications"
+                />
               </div>
-              <JobApplicationsTable />
-            </section>
-          </TabsContent>
-
-          <TabsContent value="api-keys" className="space-y-6">
-            <div className="rounded-lg border border-border bg-card p-6">
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-foreground">API Integration</h2>
-                <p className="text-sm text-muted-foreground">
-                  Manage API keys to connect your n8n workflow with this tracker
-                </p>
-              </div>
-              <ApiKeyManager />
+              {hasFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground font-mono gap-1"
+                >
+                  <X className="h-3 w-3" />
+                  Clear
+                </Button>
+              )}
             </div>
-          </TabsContent>
-        </Tabs>
-      </main>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {ALL_STATUSES.map((status) => {
+                const isActive = activeStatuses.has(status);
+                const count = statusCounts[status] || 0;
+                if (count === 0) return null;
+                return (
+                  <button
+                    key={status}
+                    onClick={() => toggleStatus(status)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono transition-colors",
+                      isActive
+                        ? "bg-foreground text-background"
+                        : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                    aria-label={`Filter by ${status}`}
+                    aria-pressed={isActive}
+                  >
+                    <span className="capitalize">{status}</span>
+                    <span
+                      className={cn(
+                        "tabular-nums",
+                        isActive ? "text-background/70" : "text-muted-foreground/50"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {hasFilters && (
+              <span className="text-xs text-muted-foreground font-mono">
+                {applications ? applications.filter((app) => {
+                  const matchesSearch = !searchQuery || 
+                    app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    app.position.toLowerCase().includes(searchQuery.toLowerCase());
+                  const matchesStatus = activeStatuses.size === 0 || activeStatuses.has(app.currentStatus);
+                  return matchesSearch && matchesStatus;
+                }).length : 0} of {applications?.length || 0} applications
+              </span>
+            )}
+          </div>
+        </header>
+
+        <section aria-label="Applications list">
+          <JobApplicationsTable searchQuery={searchQuery} statusFilter={Array.from(activeStatuses)} />
+        </section>
+      </div>
     </div>
   );
 }
