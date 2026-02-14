@@ -1,8 +1,24 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-soif2sang}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   server:
     build:
-      context: .
-      dockerfile: ./apps/server/Dockerfile
+      context: ./apps/server
+      dockerfile: Dockerfile
       args:
         BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
         BETTER_AUTH_URL: ${BETTER_AUTH_URL}
@@ -10,6 +26,12 @@ services:
         DATABASE_URL: ${DATABASE_URL}
         GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+        GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI}
+        GMAIL_CLIENT_ID: ${GMAIL_CLIENT_ID}
+        GMAIL_CLIENT_SECRET: ${GMAIL_CLIENT_SECRET}
+        GMAIL_REDIRECT_URI: ${GMAIL_REDIRECT_URI}
+        GEMINI_API_KEY: ${GEMINI_API_KEY}
+        PUBSUB_VERIFICATION_TOKEN: ${PUBSUB_VERIFICATION_TOKEN}
         PORT: ${PORT:-3002}
     environment:
       - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET}
@@ -18,26 +40,49 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
+      - GMAIL_CLIENT_ID=${GMAIL_CLIENT_ID}
+      - GMAIL_CLIENT_SECRET=${GMAIL_CLIENT_SECRET}
+      - GMAIL_REDIRECT_URI=${GMAIL_REDIRECT_URI}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - PUBSUB_VERIFICATION_TOKEN=${PUBSUB_VERIFICATION_TOKEN}
+      - EMAIL_SYNC_BATCH_SIZE=${EMAIL_SYNC_BATCH_SIZE:-50}
+      - EMAIL_SYNC_MAX_AGE_DAYS=${EMAIL_SYNC_MAX_AGE_DAYS:-90}
       - PORT=${PORT:-3002}
-    expose:
-      - ${PORT:-3002}
-    networks:
-      - dokploy-network
+    ports:
+      - "${PORT:-3002}:${PORT:-3002}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  drizzle-studio:
+    build:
+      context: ./apps/server
+      dockerfile: Dockerfile
+      args:
+        DATABASE_URL: ${DATABASE_URL}
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    command: ["npx", "drizzle-kit", "studio", "--host", "0.0.0.0", "--port", "4984"]
+    ports:
+      - "4984:4984"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   web:
     build:
-      context: .
-      dockerfile: ./apps/web/Dockerfile
+      context: ./apps/web
+      dockerfile: Dockerfile
       args:
         VITE_SERVER_URL: ${VITE_SERVER_URL}
         VITE_API_URL: ${VITE_API_URL}
     environment:
       - VITE_SERVER_URL=${VITE_SERVER_URL}
       - VITE_API_URL=${VITE_API_URL}
-    expose:
-      - 81
-    networks:
-      - dokploy-network
+    ports:
+      - "3003:81"
 
-networks:
-  dokploy-network:
+
+volumes:
+  postgres_data:
