@@ -76,7 +76,7 @@ export const jobTrackingRouter = t.router({
         COUNT(*) FILTER (WHERE state = 'active')::int AS active,
         COUNT(*) FILTER (WHERE state = 'completed')::int AS completed,
         COUNT(*) FILTER (WHERE state = 'failed')::int AS failed
-      FROM public.job
+      FROM pgboss.job
       WHERE name = 'process-email'
         AND data->>'userId' = ${userId}
         ${syncStartedAt ? sql`AND createdon >= ${syncStartedAt}` : sql``}
