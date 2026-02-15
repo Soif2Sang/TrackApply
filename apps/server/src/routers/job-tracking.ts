@@ -82,7 +82,7 @@ export const jobTrackingRouter = t.router({
         FROM pgboss.job
         WHERE name = 'process-email'
           AND data->>'userId' = ${userId}
-          ${syncStartedAt ? sql`AND create_don >= ${syncStartedAt}` : sql``}
+          ${syncStartedAt ? sql`AND created_on >= ${syncStartedAt}` : sql``}
       `);
     } catch (error) {
       console.log("Error fetching job stats:", error);
