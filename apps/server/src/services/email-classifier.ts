@@ -54,11 +54,29 @@ Body:
 
 RESPOND WITH JSON ONLY`;
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n+/g, '\n')
+    .trim();
+}
+
 function generatePrompt(input: EmailInput): string {
   return USER_PROMPT_TEMPLATE
     .replace("{{subject}}", input.subject)
     .replace("{{from}}", input.from)
-    .replace("{{body}}", input.body)
+    .replace("{{body}}", stripHtml(input.body))
 }
 
 export async function classifyEmail(input: EmailInput): Promise<ClassificationResult> {
