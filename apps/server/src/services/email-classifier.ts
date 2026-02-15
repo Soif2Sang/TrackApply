@@ -19,7 +19,7 @@ export interface EmailInput {
   snippet?: string;
 }
 
-const CLASSIFICATION_PROMPT = `You are an expert at analyzing recruitment emails. Classify this email into ONE of these categories:
+const CLASSIFICATION_SYSTEM_INSTRUCTION = `Classify this email into ONE of these categories:
 
 CATEGORIES:
 1. RECRUITMENT_ACK - Simple acknowledgment that application was received
@@ -43,9 +43,9 @@ OUTPUT FORMAT (JSON only, no markdown, no explanation):
   "company": "company name or company email domain or null",
   "job_id": "reference number or null",
   "confidence": "high|medium|low"
-}
+}`;
 
-EMAIL TO ANALYZE:
+const USER_PROMPT_TEMPLATE = `EMAIL TO ANALYZE:
 Subject: {{subject}}
 From: {{from}}
 
@@ -55,7 +55,7 @@ Body:
 RESPOND WITH JSON ONLY`;
 
 function generatePrompt(input: EmailInput): string {
-  return CLASSIFICATION_PROMPT
+  return USER_PROMPT_TEMPLATE
     .replace("{{subject}}", input.subject)
     .replace("{{from}}", input.from)
     .replace("{{body}}", input.body)
@@ -64,7 +64,10 @@ function generatePrompt(input: EmailInput): string {
 export async function classifyEmail(input: EmailInput): Promise<ClassificationResult> {
   const startTime = Date.now();
   try {
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+    const model = genAI.getGenerativeModel({ 
+  model: GEMINI_MODEL,
+  systemInstruction: CLASSIFICATION_SYSTEM_INSTRUCTION,
+});
     
     const prompt = generatePrompt(input);
     const requestStart = Date.now();
