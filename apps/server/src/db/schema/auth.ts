@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, boolean, serial, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -9,20 +9,31 @@ export const user = pgTable("user", {
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
   
-  // Gmail OAuth tokens for email processing
-  gmailRefreshToken: text("gmail_refresh_token"),
-  gmailAccessToken: text("gmail_access_token"),
-  gmailTokenExpiry: timestamp("gmail_token_expiry"),
-  gmailConnected: boolean("gmail_connected").default(false),
-  
   // Application sync tracking
   applicationSyncLastCompletedAt: timestamp("application_sync_last_completed_at"),
   applicationSyncHistoryEarliestDate: timestamp("application_sync_history_earliest_date"),
   applicationSyncLastStartedAt: timestamp("application_sync_last_started_at"),
-  
-  // Gmail push notification watch
-  gmailWatchExpiration: timestamp("gmail_watch_expiration"),
-  gmailWatchHistoryId: text("gmail_watch_history_id"),
+  lastPolledAt: timestamp("last_polled_at"),
+  lastPollStatus: text("last_poll_status"),
+});
+
+export const gmailConnection = pgTable("gmail_connection", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+
+  googleProjectId: text("google_project_id"),
+  googleClientId: text("google_client_id"),
+  googleClientSecret: text("google_client_secret"),
+
+  gmailRefreshToken: text("gmail_refresh_token"),
+  gmailAccessToken: text("gmail_access_token"),
+  gmailTokenExpiry: timestamp("gmail_token_expiry"),
+
+  connectedAt: timestamp("connected_at"),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const session = pgTable("session", {

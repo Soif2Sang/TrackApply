@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
 import { eq } from "drizzle-orm";
 import * as authSchema from "../db/schema/auth";
-import { user } from "../db/schema/auth";
+import { gmailConnection } from "../db/schema/auth";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -30,15 +30,16 @@ export const auth = betterAuth({
   callbacks: {
     session: async ({ session, user: _userFromDb }: { session: any; user: any }) => {
       console.log("[AUTH] Session callback invoked for user:", session.user.id);
-      const dbUser = await db.query.user.findFirst({
-        where: eq(user.id, session.user.id),
+      const connection = await db.query.gmailConnection.findFirst({
+        where: eq(gmailConnection.userId, session.user.id),
       });
-      console.log("[AUTH] DB user gmailConnected:", dbUser?.gmailConnected);
+      const gmailConnected = Boolean(connection?.gmailRefreshToken);
+      console.log("[AUTH] DB user gmailConnected:", gmailConnected);
       return {
         ...session,
         user: {
           ...session.user,
-          gmailConnected: dbUser?.gmailConnected ?? false,
+          gmailConnected,
         },
       };
     },

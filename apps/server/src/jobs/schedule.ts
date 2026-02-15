@@ -1,75 +1,49 @@
 import { schedule } from "node-cron";
 import { db } from "../db";
-import { user } from "../db/schema/auth";
-import { eq, lt } from "drizzle-orm";
-import { listMessages, startGmailWatch } from "../services/gmail-service";
+import { gmailConnection, user } from "../db/schema/auth";
+import { eq } from "drizzle-orm";
+import { listConnectedUserIds, listMessages, setPollCheckpoint } from "../services/gmail-service";
 import { boss, JOB_NAMES } from "./pgboss";
 
-// Cron job to sync old emails for all users with Gmail connected
-// Runs every day at 2:00 AM
 export function startCronJobs() {
   console.log("🕐 Starting cron jobs...");
 
-  // Daily sync of recent emails
-  schedule("0 2 * * *", async () => {
-    console.log("🔄 Starting daily email sync...");
+  // Poll all connected inboxes every 5 minutes
+  schedule("*/5 * * * *", async () => {
+    console.log("🔄 Starting 5-minute inbox polling...");
     
     try {
-      // Get all users with Gmail connected
-      const users = await db.query.user.findMany({
-        where: eq(user.gmailConnected, true),
-      });
+      const userIds = await listConnectedUserIds();
+      console.log(`📧 Found ${userIds.length} connected Gmail account(s)`);
 
-      console.log(`📧 Found ${users.length} users with Gmail connected`);
-
-      for (const u of users) {
+      for (const userId of userIds) {
         try {
-          await syncUserEmails(u.id);
+          const userRecord = await db.query.user.findFirst({
+            where: eq(user.id, userId),
+          });
+
+          const now = new Date();
+          const since = userRecord?.lastPolledAt
+            ? new Date(userRecord.lastPolledAt.getTime() - 2 * 60 * 1000)
+            : new Date(now.getTime() - 10 * 60 * 1000);
+
+          const result = await syncUserEmailsFromDate(userId, since);
+          await setPollCheckpoint(userId, {
+            lastPolledAt: now,
+            lastPollStatus: `ok:${result.synced}`,
+          });
         } catch (error) {
-          console.error(`❌ Error syncing emails for user ${u.id}:`, error);
-          // Continue with next user
+          console.error(`❌ Error polling user ${userId}:`, error);
+          await setPollCheckpoint(userId, {
+            lastPolledAt: new Date(),
+            lastPollStatus: "error",
+          });
         }
       }
 
-      console.log("✅ Daily email sync completed");
+      console.log("✅ 5-minute inbox polling completed");
     } catch (error) {
-      console.error("❌ Error in daily sync cron:", error);
-    }
-  });
-
-  // Daily watch renewal - renew watches expiring within next 24 hours
-  schedule("0 3 * * *", async () => {
-    console.log("🔄 Starting Gmail watch renewal...");
-    
-    try {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      // Get all users with Gmail connected and watch expiring soon
-      const users = await db.query.user.findMany({
-        where: eq(user.gmailConnected, true),
-      });
-
-      const usersToRenew = users.filter(u => {
-        if (!u.gmailWatchExpiration) return true; // No watch, need to create one
-        return u.gmailWatchExpiration < tomorrow; // Expires within 24h
-      });
-
-      console.log(`📧 Found ${usersToRenew.length} users needing watch renewal`);
-
-      for (const u of usersToRenew) {
-        try {
-          await startGmailWatch(u.id);
-          console.log(`✅ Renewed Gmail watch for user ${u.id}`);
-        } catch (error) {
-          console.error(`❌ Error renewing watch for user ${u.id}:`, error);
-          // Continue with next user
-        }
-      }
-
-      console.log("✅ Gmail watch renewal completed");
-    } catch (error) {
-      console.error("❌ Error in watch renewal cron:", error);
+      console.error("❌ Error in inbox polling cron:", error);
     }
   });
 
@@ -84,12 +58,16 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
     where: eq(user.id, userId),
   });
 
-  if (!userRecord?.gmailConnected) {
+  const connection = await db.query.gmailConnection.findFirst({
+    where: eq(gmailConnection.userId, userId),
+  });
+
+  if (!userRecord || !connection?.gmailRefreshToken) {
     console.log(`⚠️ User ${userId} has not connected Gmail`);
     return { synced: 0 };
   }
 
-  const query = `after:${fromDate.toISOString().split("T")[0]}`;
+  const query = `after:${Math.floor(fromDate.getTime() / 1000)}`;
   const pageSize = parseInt(process.env.EMAIL_SYNC_PAGE_SIZE || "100", 10);
   const maxTotal = parseInt(process.env.EMAIL_SYNC_MAX_TOTAL || "0", 10);
 

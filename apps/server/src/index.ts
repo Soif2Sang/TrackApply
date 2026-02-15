@@ -8,7 +8,6 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { startPgBoss, stopPgBoss } from "./jobs/pgboss";
 import { startCronJobs } from "./jobs/schedule";
-import webhooks from "./routes/webhooks";
 import gmailAuth from "./routes/gmail-auth";
 
 const app = new Hono();
@@ -25,9 +24,6 @@ app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
 
 // Gmail OAuth routes
 app.route("/auth/gmail", gmailAuth);
-
-// Webhook routes for Gmail push notifications
-app.route("/webhooks", webhooks);
 
 app.use("/trpc/*", trpcServer({
   router: appRouter,

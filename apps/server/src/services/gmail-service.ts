@@ -1,17 +1,140 @@
 import { google } from "googleapis";
 import { db } from "../db";
-import { user } from "../db/schema/auth";
+import { gmailConnection, user } from "../db/schema/auth";
 import { eq } from "drizzle-orm";
+import { decrypt, encrypt } from "./encryption-service";
 
-const gmailClientId = process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
-const gmailClientSecret = process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET;
-const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI;
+const defaultRedirectUri = process.env.GMAIL_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI;
 
-const oauth2Client = new google.auth.OAuth2(
-  gmailClientId,
-  gmailClientSecret,
-  gmailRedirectUri
-);
+type GmailProjectConfigInput = {
+  googleProjectId: string;
+  googleClientId: string;
+  googleClientSecret: string;
+};
+
+function maybeDecrypt(value: string | null): string | null {
+  if (!value) return null;
+
+  try {
+    return decrypt(value);
+  } catch {
+    return value;
+  }
+}
+
+async function getConnection(userId: string) {
+  return db.query.gmailConnection.findFirst({
+    where: eq(gmailConnection.userId, userId),
+  });
+}
+
+async function ensureConnectionRow(userId: string) {
+  const existing = await getConnection(userId);
+  if (existing) return existing;
+
+  await db.insert(gmailConnection).values({
+    userId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  return getConnection(userId);
+}
+
+function getUserOauthClient(connection: {
+  googleClientId: string | null;
+  googleClientSecret: string | null;
+}) {
+  const clientId = maybeDecrypt(connection.googleClientId);
+  const clientSecret = maybeDecrypt(connection.googleClientSecret);
+
+  if (!clientId || !clientSecret || !defaultRedirectUri) {
+    throw new Error("Gmail project is not fully configured");
+  }
+
+  return new google.auth.OAuth2(clientId, clientSecret, defaultRedirectUri);
+}
+
+export async function upsertGmailProjectConfig(userId: string, input: GmailProjectConfigInput) {
+  const now = new Date();
+  await ensureConnectionRow(userId);
+
+  await db
+    .update(gmailConnection)
+    .set({
+      googleProjectId: encrypt(input.googleProjectId),
+      googleClientId: encrypt(input.googleClientId),
+      googleClientSecret: encrypt(input.googleClientSecret),
+      updatedAt: now,
+    })
+    .where(eq(gmailConnection.userId, userId));
+
+  return getGmailConnectionStatus(userId);
+}
+
+export async function getGmailConnectionStatus(userId: string) {
+  const [userRecord, connection] = await Promise.all([
+    db.query.user.findFirst({ where: eq(user.id, userId) }),
+    getConnection(userId),
+  ]);
+
+  if (!userRecord) {
+    return null;
+  }
+
+  const configured = Boolean(
+    connection?.googleProjectId &&
+      connection?.googleClientId &&
+      connection?.googleClientSecret
+  );
+
+  const connected = Boolean(connection?.gmailRefreshToken);
+
+  return {
+    configured,
+    connected,
+    applicationSyncLastCompletedAt: userRecord.applicationSyncLastCompletedAt,
+    applicationSyncHistoryEarliestDate: userRecord.applicationSyncHistoryEarliestDate,
+    lastPolledAt: userRecord.lastPolledAt ?? null,
+    lastPollStatus: userRecord.lastPollStatus ?? null,
+  };
+}
+
+export async function disconnectGmail(userId: string) {
+  const now = new Date();
+
+  await ensureConnectionRow(userId);
+  await db
+    .update(gmailConnection)
+    .set({
+      gmailRefreshToken: null,
+      gmailAccessToken: null,
+      gmailTokenExpiry: null,
+      connectedAt: null,
+      updatedAt: now,
+    })
+    .where(eq(gmailConnection.userId, userId));
+}
+
+export async function setPollCheckpoint(
+  userId: string,
+  input: { lastPolledAt: Date; lastPollStatus: string }
+) {
+  await db
+    .update(user)
+    .set({
+      lastPolledAt: input.lastPolledAt,
+      lastPollStatus: input.lastPollStatus,
+    })
+    .where(eq(user.id, userId));
+}
+
+export async function listConnectedUserIds(): Promise<string[]> {
+  const rows = await db.query.gmailConnection.findMany();
+  return rows
+    .filter((row) => Boolean(row.gmailRefreshToken))
+    .map((row) => row.userId);
+}
 
 // Label IDs mapping (to be configured based on user's Gmail labels)
 export const LABEL_IDS = {
@@ -92,31 +215,36 @@ export function getLabelForClassification(
 }
 
 async function refreshAccessToken(userId: string): Promise<string | null> {
-  const userRecord = await db.query.user.findFirst({
-    where: eq(user.id, userId),
-  });
+  const connection = await getConnection(userId);
 
-  if (!userRecord?.gmailRefreshToken) {
+  if (!connection?.gmailRefreshToken) {
     return null;
   }
 
   try {
+    const oauth2Client = getUserOauthClient(connection);
+    const refreshToken = maybeDecrypt(connection.gmailRefreshToken);
+    if (!refreshToken) {
+      return null;
+    }
+
     oauth2Client.setCredentials({
-      refresh_token: userRecord.gmailRefreshToken,
+      refresh_token: refreshToken,
     });
 
     const { credentials } = await oauth2Client.refreshAccessToken();
     
     // Update tokens in database
     await db
-      .update(user)
+      .update(gmailConnection)
       .set({
-        gmailAccessToken: credentials.access_token,
+        gmailAccessToken: credentials.access_token ? encrypt(credentials.access_token) : null,
         gmailTokenExpiry: credentials.expiry_date 
           ? new Date(credentials.expiry_date) 
           : null,
+        updatedAt: new Date(),
       })
-      .where(eq(user.id, userId));
+      .where(eq(gmailConnection.userId, userId));
 
     return credentials.access_token || null;
   } catch (error) {
@@ -126,16 +254,21 @@ async function refreshAccessToken(userId: string): Promise<string | null> {
 }
 
 export async function getGmailClient(userId: string) {
-  const userRecord = await db.query.user.findFirst({
-    where: eq(user.id, userId),
-  });
+  const connection = await getConnection(userId);
 
-  if (!userRecord?.gmailRefreshToken) {
+  if (!connection?.gmailRefreshToken) {
     throw new Error("User has not connected Gmail");
   }
 
-  let accessToken = userRecord.gmailAccessToken;
-  const tokenExpiry = userRecord.gmailTokenExpiry;
+  const oauth2Client = getUserOauthClient(connection);
+
+  let accessToken = maybeDecrypt(connection.gmailAccessToken);
+  const refreshToken = maybeDecrypt(connection.gmailRefreshToken);
+  const tokenExpiry = connection.gmailTokenExpiry;
+
+  if (!refreshToken) {
+    throw new Error("User has not connected Gmail");
+  }
 
   // Check if token needs refresh
   if (!accessToken || !tokenExpiry || tokenExpiry < new Date()) {
@@ -147,10 +280,51 @@ export async function getGmailClient(userId: string) {
 
   oauth2Client.setCredentials({
     access_token: accessToken,
-    refresh_token: userRecord.gmailRefreshToken,
+    refresh_token: refreshToken,
   });
 
   return google.gmail({ version: "v1", auth: oauth2Client });
+}
+
+export async function createUserGmailAuthUrl(userId: string, scopes: string[]) {
+  const connection = await getConnection(userId);
+  if (!connection) {
+    throw new Error("Gmail project is not configured");
+  }
+
+  const oauth2Client = getUserOauthClient(connection);
+  return oauth2Client.generateAuthUrl({
+    access_type: "offline",
+    scope: scopes,
+    state: userId,
+    prompt: "consent",
+    redirect_uri: defaultRedirectUri,
+  });
+}
+
+export async function exchangeCodeForUserTokens(userId: string, code: string) {
+  const connection = await getConnection(userId);
+  if (!connection) {
+    throw new Error("Gmail project is not configured");
+  }
+
+  const oauth2Client = getUserOauthClient(connection);
+  const { tokens } = await oauth2Client.getToken(code);
+
+  if (!tokens.refresh_token) {
+    throw new Error("No refresh token received");
+  }
+
+  await db
+    .update(gmailConnection)
+    .set({
+      gmailRefreshToken: encrypt(tokens.refresh_token),
+      gmailAccessToken: tokens.access_token ? encrypt(tokens.access_token) : null,
+      gmailTokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+      connectedAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(gmailConnection.userId, userId));
 }
 
 export async function getMessage(userId: string, messageId: string) {
@@ -221,78 +395,6 @@ export async function listMessages(
     pageToken: options?.pageToken,
     maxResults: options?.maxResults,
   });
-}
-
-// Start Gmail watch for push notifications
-export async function startGmailWatch(userId: string) {
-  const gmail = await getGmailClient(userId);
-  const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-  
-  if (!projectId) {
-    console.error("❌ GOOGLE_CLOUD_PROJECT_ID not set");
-    throw new Error("GOOGLE_CLOUD_PROJECT_ID not configured");
-  }
-
-  const topicName = `projects/${projectId}/topics/gmail-notifications`;
-
-  try {
-    const response = await gmail.users.watch({
-      userId: "me",
-      requestBody: {
-        topicName: topicName,
-        labelIds: ["INBOX"],
-        labelFilterAction: "include",
-      },
-    });
-
-    console.log(`✅ Gmail watch started for user ${userId}`);
-    console.log(`   History ID: ${response.data.historyId}`);
-    console.log(`   Expiration: ${response.data.expiration ? new Date(parseInt(response.data.expiration)).toISOString() : 'N/A'}`);
-
-    // Store watch expiration in database
-    await db
-      .update(user)
-      .set({
-        gmailWatchExpiration: response.data.expiration 
-          ? new Date(parseInt(response.data.expiration)) 
-          : null,
-        gmailWatchHistoryId: response.data.historyId?.toString() || null,
-      })
-      .where(eq(user.id, userId));
-
-    return {
-      historyId: response.data.historyId,
-      expiration: response.data.expiration,
-    };
-  } catch (error: any) {
-    console.error(`❌ Failed to start Gmail watch for user ${userId}:`, error.message);
-    throw error;
-  }
-}
-
-// Stop Gmail watch (call when disconnecting)
-export async function stopGmailWatch(userId: string) {
-  const gmail = await getGmailClient(userId);
-
-  try {
-    await gmail.users.stop({
-      userId: "me",
-    });
-
-    console.log(`✅ Gmail watch stopped for user ${userId}`);
-
-    // Clear watch data from database
-    await db
-      .update(user)
-      .set({
-        gmailWatchExpiration: null,
-        gmailWatchHistoryId: null,
-      })
-      .where(eq(user.id, userId));
-  } catch (error: any) {
-    console.error(`❌ Failed to stop Gmail watch for user ${userId}:`, error.message);
-    // Don't throw - we still want to disconnect even if stop fails
-  }
 }
 
 // Helper to extract email data from Gmail message

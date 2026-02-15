@@ -103,7 +103,7 @@ function HomeComponent() {
               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-foreground">
                 1
               </div>
-              <p>Connect your Gmail account via n8n workflow</p>
+              <p>Configure your Google project credentials and authorize Gmail</p>
             </div>
             <div className="flex items-start gap-3 text-sm text-muted-foreground">
               <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-medium text-foreground">
