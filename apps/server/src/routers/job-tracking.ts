@@ -212,7 +212,7 @@ export const jobTrackingRouter = t.router({
         return {
           success: true,
           synced: result.synced,
-          message: `Synced ${result.synced} emails`,
+          message: `Scheduled analysis of ${result.synced} emails.`,
         };
       } catch (error) {
         console.error("Error triggering manual sync:", error);

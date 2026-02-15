@@ -26,8 +26,8 @@ export function EmailSyncButton() {
     ...trpc.jobTracking.triggerSyncFromDate.mutationOptions(),
     onSuccess: (data) => {
       setSyncProgress(100);
-      toast.success(data.message || "Email sync completed successfully", {
-        description: `${data.synced} emails processed`,
+      toast.success(data.message, {
+        description: `We’re processing your data. You’ll see the results in your dashboard shortly.`,
       });
       // Invalidate and refetch applications
       queryClient.invalidateQueries({
