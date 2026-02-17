@@ -339,50 +339,76 @@ export const jobTrackingRouter = t.router({
     .input(z.object({ id: z.string().uuid(), ignoreEmails: z.boolean().optional().default(false) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session!.user.id;
+      console.log(`[DELETE-APP] Starting deletion for application ${input.id}, user ${userId}, ignoreEmails=${input.ignoreEmails}`);
 
-      const application = await db.query.jobApplications.findFirst({
-        where: and(
-          eq(jobApplications.id, input.id),
-          eq(jobApplications.userId, userId)
-        ),
-      });
-
-      if (!application) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Application not found",
-        });
-      }
-
-      // If ignoreEmails is true, get all event IDs and add to ignored list
-      if (input.ignoreEmails) {
-        const events = await db.query.applicationEvents.findMany({
-          where: eq(applicationEvents.applicationId, input.id),
+      try {
+        const application = await db.query.jobApplications.findFirst({
+          where: and(
+            eq(jobApplications.id, input.id),
+            eq(jobApplications.userId, userId)
+          ),
         });
 
-        const eventIds = events.map(e => e.id);
-
-        if (eventIds.length > 0) {
-          await db.insert(ignoredEmails).values(
-            eventIds.map(eventId => ({
-              userId,
-              emailId: eventId,
-            }))
-          ).onConflictDoNothing();
+        if (!application) {
+          console.log(`[DELETE-APP] Application ${input.id} not found for user ${userId}`);
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Application not found",
+          });
         }
+        console.log(`[DELETE-APP] Found application: ${application.company} (${application.position})`);
+
+        // If ignoreEmails is true, get all event IDs and add to ignored list
+        if (input.ignoreEmails) {
+          console.log(`[DELETE-APP] Fetching events for ignoreEmails`);
+          const events = await db.query.applicationEvents.findMany({
+            where: eq(applicationEvents.applicationId, input.id),
+          });
+          console.log(`[DELETE-APP] Found ${events.length} events to ignore`);
+
+          const eventIds = events.map(e => e.id);
+
+          if (eventIds.length > 0) {
+            console.log(`[DELETE-APP] Inserting ${eventIds.length} ignored emails`);
+            await db.insert(ignoredEmails).values(
+              eventIds.map(eventId => ({
+                userId,
+                emailId: eventId,
+              }))
+            ).onConflictDoNothing();
+            console.log(`[DELETE-APP] Ignored emails inserted`);
+          }
+        }
+
+        // Delete related events first (cascade)
+        console.log(`[DELETE-APP] Deleting application events`);
+        const eventsResult = await db
+          .delete(applicationEvents)
+          .where(eq(applicationEvents.applicationId, input.id))
+          .returning({ id: applicationEvents.id });
+        console.log(`[DELETE-APP] Deleted ${eventsResult.length} application events`);
+
+        // Delete the application
+        console.log(`[DELETE-APP] Deleting job application`);
+        const appResult = await db
+          .delete(jobApplications)
+          .where(eq(jobApplications.id, input.id))
+          .returning({ id: jobApplications.id });
+        console.log(`[DELETE-APP] Deleted job application: ${appResult.length > 0 ? 'success' : 'failed'}`);
+
+        console.log(`[DELETE-APP] Deletion completed successfully`);
+        return { success: true };
+      } catch (error) {
+        console.error(`[DELETE-APP] ERROR during deletion:`, error);
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: `Failed to delete application: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          cause: error,
+        });
       }
-
-      // Delete related events first (cascade)
-      await db
-        .delete(applicationEvents)
-        .where(eq(applicationEvents.applicationId, input.id));
-
-      // Delete the application
-      await db
-        .delete(jobApplications)
-        .where(eq(jobApplications.id, input.id));
-
-      return { success: true };
     }),
 
   mergeApplications: requireAuth
