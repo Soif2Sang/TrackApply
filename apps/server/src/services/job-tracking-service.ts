@@ -171,8 +171,12 @@ export async function processRecruitmentEmail(
   input: ProcessEmailInput
 ): Promise<ProcessEmailResult> {
   try {
+    console.log(`[PROCESS-EMAIL] Processing email ${input.emailId} for user ${userId}`);
+    console.log(`[PROCESS-EMAIL] Company: ${input.company}, Position: ${input.position}`);
+
     // Check if email ID is in the ignore list
     if (await isEmailIgnored(userId, input.emailId)) {
+      console.log(`[PROCESS-EMAIL] Email ${input.emailId} is ignored - skipping`);
       return {
         success: true,
         applicationId: "",
@@ -183,6 +187,31 @@ export async function processRecruitmentEmail(
       };
     }
 
+    // Check if event already exists BEFORE finding/creating application
+    // This prevents creating duplicate applications for emails we already processed
+    const eventAlreadyExists = await eventExists(input.emailId);
+    console.log(`[PROCESS-EMAIL] Event exists check for ${input.emailId}: ${eventAlreadyExists}`);
+    
+    if (eventAlreadyExists) {
+      console.log(`[PROCESS-EMAIL] Event already exists for email ${input.emailId} - skipping`);
+      // Find which application this event belongs to for the return value
+      const existingEvent = await db.query.applicationEvents.findFirst({
+        where: eq(applicationEvents.emailId, input.emailId),
+        with: {
+          application: true,
+        },
+      });
+      
+      return {
+        success: true,
+        applicationId: existingEvent?.application?.id || "",
+        isNewApplication: false,
+        status: existingEvent?.application?.currentStatus || "",
+        skipped: true,
+        message: `Event already exists for ${input.position} at ${input.company} - skipping duplicate`,
+      };
+    }
+
     // Find existing application or prepare to create new one
     let application = await findMatchingApplication(
       userId,
@@ -190,11 +219,14 @@ export async function processRecruitmentEmail(
       input.position || "Unknown Position",
       input.jobId
     );
+    
+    console.log(`[PROCESS-EMAIL] Found matching application: ${application ? application.id : 'NONE'}`);
 
     const isNewApplication = !application;
 
     if (!application) {
       // Create new application
+      console.log(`[PROCESS-EMAIL] Creating new application for ${input.position} at ${input.company}`);
       const [newApp] = await db
         .insert(jobApplications)
         .values({
@@ -208,18 +240,9 @@ export async function processRecruitmentEmail(
         .returning();
 
       application = newApp;
-    }
-
-    // Check if event already exists (deduplication)
-    if (await eventExists(input.emailId)) {
-      return {
-        success: true,
-        applicationId: application.id,
-        isNewApplication,
-        status: application.currentStatus,
-        skipped: true,
-        message: `Event already exists for ${input.position} at ${input.company} - skipping duplicate`,
-      };
+      console.log(`[PROCESS-EMAIL] Created new application: ${application.id}`);
+    } else {
+      console.log(`[PROCESS-EMAIL] Using existing application: ${application.id}`);
     }
 
     // Create event record
