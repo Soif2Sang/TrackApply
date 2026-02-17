@@ -358,7 +358,7 @@ export const jobTrackingRouter = t.router({
         }
         console.log(`[DELETE-APP] Found application: ${application.company} (${application.position})`);
 
-        // If ignoreEmails is true, get all event IDs and add to ignored list
+        // If ignoreEmails is true, get all event emailIds and add to ignored list
         if (input.ignoreEmails) {
           console.log(`[DELETE-APP] Fetching events for ignoreEmails`);
           const events = await db.query.applicationEvents.findMany({
@@ -366,17 +366,19 @@ export const jobTrackingRouter = t.router({
           });
           console.log(`[DELETE-APP] Found ${events.length} events to ignore`);
 
-          const eventIds = events.map(e => e.id);
+          const emailIds = events.map(e => e.emailId).filter(Boolean);
+          console.log(`[DELETE-APP] Extracted ${emailIds.length} email IDs from events`);
 
-          if (eventIds.length > 0) {
-            console.log(`[DELETE-APP] Inserting ${eventIds.length} ignored emails`);
-            await db.insert(ignoredEmails).values(
-              eventIds.map(eventId => ({
+          if (emailIds.length > 0) {
+            console.log(`[DELETE-APP] Inserting ${emailIds.length} ignored emails with IDs:`, emailIds);
+            const result = await db.insert(ignoredEmails).values(
+              emailIds.map(emailId => ({
                 userId,
-                emailId: eventId,
+                emailId: emailId,
               }))
-            ).onConflictDoNothing();
-            console.log(`[DELETE-APP] Ignored emails inserted`);
+            ).onConflictDoNothing()
+            .returning({ id: ignoredEmails.id, emailId: ignoredEmails.emailId });
+            console.log(`[DELETE-APP] Ignored emails inserted:`, result);
           }
         }
 

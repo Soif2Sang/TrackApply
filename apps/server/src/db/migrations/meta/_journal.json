@@ -71,6 +71,13 @@
       "when": 1771340740974,
       "tag": "0009_wise_famine",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771342739463,
+      "tag": "0010_elite_skin",
+      "breakpoints": true
     }
   ]
 }

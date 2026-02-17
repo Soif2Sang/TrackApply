@@ -156,18 +156,10 @@ async function eventExists(emailId: string): Promise<boolean> {
 
 // Check if email ID is in the ignore list
 async function isEmailIgnored(userId: string, emailId: string): Promise<boolean> {
-  const event = await db.query.applicationEvents.findFirst({
-    where: eq(applicationEvents.emailId, emailId),
-  });
-
-  if (!event) {
-    return false;
-  }
-
   const ignored = await db.query.ignoredEmails.findFirst({
     where: and(
       eq(ignoredEmails.userId, userId),
-      eq(ignoredEmails.emailId, event.id)
+      eq(ignoredEmails.emailId, emailId)
     ),
   });
   return !!ignored;

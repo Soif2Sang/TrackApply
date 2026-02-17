@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, jsonb, boolean, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./auth";
 
@@ -85,11 +85,12 @@ export const ignoredEmails = pgTable("ignored_emails", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  emailId: uuid("email_id")
-    .notNull()
-    .references(() => applicationEvents.id, { onDelete: "cascade" }),
+  emailId: text("email_id").notNull(), // Gmail message ID, not the application_events UUID
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => ({
+  // Unique constraint to prevent duplicates
+  uniqueEmailPerUser: uniqueIndex("ignored_emails_user_email_idx").on(table.userId, table.emailId),
+}));
 
 // Define relations
 export const jobApplicationsRelations = relations(jobApplications, ({ one, many }) => ({
@@ -119,9 +120,5 @@ export const ignoredEmailsRelations = relations(ignoredEmails, ({ one }) => ({
   user: one(user, {
     fields: [ignoredEmails.userId],
     references: [user.id],
-  }),
-  event: one(applicationEvents, {
-    fields: [ignoredEmails.emailId],
-    references: [applicationEvents.id],
   }),
 }));
