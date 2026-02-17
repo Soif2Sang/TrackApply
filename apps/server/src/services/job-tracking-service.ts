@@ -2,6 +2,7 @@ import { db } from "../db";
 import {
   jobApplications,
   applicationEvents,
+  ignoredEmails,
   classificationEnum,
   eventTypeEnum,
   applicationStatusEnum,
@@ -153,12 +154,43 @@ async function eventExists(emailId: string): Promise<boolean> {
   return !!existingEvent;
 }
 
+// Check if email ID is in the ignore list
+async function isEmailIgnored(userId: string, emailId: string): Promise<boolean> {
+  const event = await db.query.applicationEvents.findFirst({
+    where: eq(applicationEvents.emailId, emailId),
+  });
+
+  if (!event) {
+    return false;
+  }
+
+  const ignored = await db.query.ignoredEmails.findFirst({
+    where: and(
+      eq(ignoredEmails.userId, userId),
+      eq(ignoredEmails.emailId, event.id)
+    ),
+  });
+  return !!ignored;
+}
+
 // Main function to process recruitment email
 export async function processRecruitmentEmail(
   userId: string,
   input: ProcessEmailInput
 ): Promise<ProcessEmailResult> {
   try {
+    // Check if email ID is in the ignore list
+    if (await isEmailIgnored(userId, input.emailId)) {
+      return {
+        success: true,
+        applicationId: "",
+        isNewApplication: false,
+        status: "",
+        skipped: true,
+        message: `Email ${input.emailId} is in the ignore list - skipping`,
+      };
+    }
+
     // Find existing application or prepare to create new one
     let application = await findMatchingApplication(
       userId,

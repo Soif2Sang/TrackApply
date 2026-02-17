@@ -4,6 +4,7 @@ import {
   jobApplications,
   applicationEvents,
   applicationNotes,
+  ignoredEmails,
   applicationStatusEnum,
   classificationEnum,
   eventTypeEnum,
@@ -335,7 +336,7 @@ export const jobTrackingRouter = t.router({
     }),
 
   deleteApplication: requireAuth
-    .input(z.object({ id: z.string().uuid() }))
+    .input(z.object({ id: z.string().uuid(), ignoreEmails: z.boolean().optional().default(false) }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session!.user.id;
 
@@ -351,6 +352,24 @@ export const jobTrackingRouter = t.router({
           code: "NOT_FOUND",
           message: "Application not found",
         });
+      }
+
+      // If ignoreEmails is true, get all event IDs and add to ignored list
+      if (input.ignoreEmails) {
+        const events = await db.query.applicationEvents.findMany({
+          where: eq(applicationEvents.applicationId, input.id),
+        });
+
+        const eventIds = events.map(e => e.id);
+
+        if (eventIds.length > 0) {
+          await db.insert(ignoredEmails).values(
+            eventIds.map(eventId => ({
+              userId,
+              emailId: eventId,
+            }))
+          ).onConflictDoNothing();
+        }
       }
 
       // Delete related events first (cascade)

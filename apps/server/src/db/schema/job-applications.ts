@@ -79,6 +79,18 @@ export const applicationNotes = pgTable("application_notes", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Email IDs to ignore when processing new emails
+export const ignoredEmails = pgTable("ignored_emails", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  emailId: uuid("email_id")
+    .notNull()
+    .references(() => applicationEvents.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Define relations
 export const jobApplicationsRelations = relations(jobApplications, ({ one, many }) => ({
   user: one(user, {
@@ -100,5 +112,16 @@ export const applicationNotesRelations = relations(applicationNotes, ({ one }) =
   application: one(jobApplications, {
     fields: [applicationNotes.applicationId],
     references: [jobApplications.id],
+  }),
+}));
+
+export const ignoredEmailsRelations = relations(ignoredEmails, ({ one }) => ({
+  user: one(user, {
+    fields: [ignoredEmails.userId],
+    references: [user.id],
+  }),
+  event: one(applicationEvents, {
+    fields: [ignoredEmails.emailId],
+    references: [applicationEvents.id],
   }),
 }));

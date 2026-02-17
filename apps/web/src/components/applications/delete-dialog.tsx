@@ -1,5 +1,6 @@
 import { Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +16,8 @@ interface DeleteDialogProps {
   onConfirm: () => void;
   company: string;
   isPending: boolean;
+  ignoreEmails: boolean;
+  onIgnoreEmailsChange: (checked: boolean) => void;
 }
 
 export function DeleteDialog({
@@ -23,6 +26,8 @@ export function DeleteDialog({
   onConfirm,
   company,
   isPending,
+  ignoreEmails,
+  onIgnoreEmailsChange,
 }: DeleteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -36,6 +41,19 @@ export function DeleteDialog({
             events.
           </DialogDescription>
         </DialogHeader>
+        <div className="flex items-center space-x-2 py-2">
+          <Checkbox
+            id="ignoreEmails"
+            checked={ignoreEmails}
+            onCheckedChange={(checked) => onIgnoreEmailsChange(checked === true)}
+          />
+          <label
+            htmlFor="ignoreEmails"
+            className="text-sm text-muted-foreground cursor-pointer"
+          >
+            Never track these emails again
+          </label>
+        </div>
         <DialogFooter className="gap-2">
           <Button
             variant="outline"

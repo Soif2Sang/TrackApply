@@ -26,6 +26,7 @@ function ApplicationDetailPage() {
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [ignoreEmails, setIgnoreEmails] = useState(false);
 
   const {
     application,
@@ -161,10 +162,15 @@ function ApplicationDetailPage() {
 
         <DeleteDialog
           open={showDeleteDialog}
-          onOpenChange={setShowDeleteDialog}
-          onConfirm={() => mutations.deleteApplication({ id: application.id })}
+          onOpenChange={(open) => {
+            setShowDeleteDialog(open);
+            if (!open) setIgnoreEmails(false);
+          }}
+          onConfirm={() => mutations.deleteApplication({ id: application.id, ignoreEmails })}
           company={application.company}
           isPending={mutations.deleteApplicationPending}
+          ignoreEmails={ignoreEmails}
+          onIgnoreEmailsChange={setIgnoreEmails}
         />
 
         <MergeDialog
