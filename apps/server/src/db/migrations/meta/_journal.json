@@ -64,6 +64,13 @@
       "when": 1780000001000,
       "tag": "0008_remove_google_project_id",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771340740974,
+      "tag": "0009_wise_famine",
+      "breakpoints": true
     }
   ]
 }
