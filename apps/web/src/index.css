@@ -277,3 +277,14 @@ body {
     letter-spacing: var(--tracking-normal);
   }
 }
+
+/* Override sonner toast description styles for better light mode contrast */
+[data-sonner-toast][data-styled='true'] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.8;
+}
+
+[data-sonner-toaster][data-sonner-theme='dark'] [data-description] {
+  color: var(--foreground) !important;
+  opacity: 0.9;
+}
