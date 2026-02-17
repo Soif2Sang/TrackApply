@@ -15,7 +15,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           toast:
             "group toast border-border bg-card text-card-foreground shadow-lg",
           title: "text-foreground text-sm font-medium",
-          description: "text-muted-foreground text-xs",
+          description: "text-card-foreground text-xs",
           actionButton:
             "bg-primary text-primary-foreground hover:bg-primary/90",
           cancelButton: "bg-secondary text-secondary-foreground hover:bg-secondary/80",

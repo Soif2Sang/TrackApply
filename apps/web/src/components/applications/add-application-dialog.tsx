@@ -103,6 +103,21 @@ export function AddApplicationDialog({
             </div>
             <div className="space-y-2">
               <Label
+                htmlFor="jobId"
+                className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
+              >
+                Job ID
+              </Label>
+              <Input
+                id="jobId"
+                value={jobId}
+                onChange={(e) => setJobId(e.target.value)}
+                placeholder="Optional reference number"
+                className="h-9 bg-secondary border-border text-foreground text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label
                 htmlFor="position"
                 className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
               >
@@ -116,22 +131,6 @@ export function AddApplicationDialog({
                 className="h-9 bg-secondary border-border text-foreground text-sm"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label
-              htmlFor="jobId"
-              className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
-            >
-              Job ID
-            </Label>
-            <Input
-              id="jobId"
-              value={jobId}
-              onChange={(e) => setJobId(e.target.value)}
-              placeholder="Optional reference number"
-              className="h-9 bg-secondary border-border text-foreground text-sm"
-            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
