@@ -1,0 +1,1 @@
+ALTER TABLE "gmail_connection" DROP COLUMN IF EXISTS "google_project_id";
