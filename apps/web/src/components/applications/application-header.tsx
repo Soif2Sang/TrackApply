@@ -1,4 +1,4 @@
-import { Pencil, Check } from "lucide-react";
+import { ChevronLeft, Pencil, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
 import { STATUS_OPTIONS, STATUS_STYLES, STATUS_STYLES_ACTIVE } from "@/constants/applications";
@@ -10,6 +10,7 @@ interface ApplicationHeaderProps {
   currentStatus: string;
   editingStatus: boolean;
   isPending: boolean;
+  onBack: () => void;
   onToggleStatus: () => void;
   onStatusSelect: (status: string) => void;
 }
@@ -21,13 +22,23 @@ export function ApplicationHeader({
   currentStatus,
   editingStatus,
   isPending,
+  onBack,
   onToggleStatus,
   onStatusSelect,
 }: ApplicationHeaderProps) {
   return (
-    <div className="flex flex-col gap-4 pb-6 border-b border-border">
+    <div className="flex flex-col gap-3">
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-fit flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        Back to applications
+      </button>
+
       <div className="flex items-center gap-3">
-        <h1 className="text-foreground text-xl font-medium tracking-tight">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {company}
         </h1>
         <button
@@ -40,14 +51,15 @@ export function ApplicationHeader({
           <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
         </button>
       </div>
-      <p className="text-muted-foreground text-sm font-mono">
+
+      <p className="text-base text-muted-foreground">
         {position}
-        {jobId && <span className="ml-2">• {jobId}</span>}
+        {jobId && <span className="ml-2 text-muted-foreground/60">· {jobId}</span>}
       </p>
 
       {editingStatus && (
-        <div className="flex flex-col gap-2 pt-2">
-          <span className="text-xs text-muted-foreground font-mono uppercase tracking-wider">
+        <div className="flex flex-col gap-2 pt-1">
+          <span className="text-xs text-muted-foreground uppercase tracking-wider">
             Override status
           </span>
           <div className="flex flex-wrap gap-2">
@@ -60,7 +72,7 @@ export function ApplicationHeader({
                   onClick={() => onStatusSelect(s.value)}
                   disabled={isPending}
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-mono font-medium transition-all cursor-pointer",
+                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
                     isActive ? STATUS_STYLES_ACTIVE[s.value] : STATUS_STYLES[s.value]
                   )}
                 >

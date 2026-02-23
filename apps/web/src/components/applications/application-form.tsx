@@ -45,7 +45,7 @@ export function ApplicationForm({
         e.stopPropagation();
         form.handleSubmit();
       }}
-      className="rounded-lg border border-border bg-card p-6 mb-8"
+      className="rounded-2xl border border-border/60 bg-card/60 p-6"
     >
       <h2 className="text-sm font-medium text-foreground mb-4">Edit Application</h2>
       
@@ -61,7 +61,7 @@ export function ApplicationForm({
             <div className="space-y-2">
               <Label
                 htmlFor={field.name}
-                className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
+                className="text-xs uppercase tracking-wider text-muted-foreground"
               >
                 Company *
               </Label>
@@ -72,7 +72,7 @@ export function ApplicationForm({
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 className={cn(
-                  "h-8 bg-secondary border-border text-foreground text-xs font-mono",
+                  "h-9 bg-secondary border-border text-foreground text-sm",
                   field.state.meta.errors.length > 0 && "border-red-500"
                 )}
               />
@@ -94,7 +94,7 @@ export function ApplicationForm({
             <div className="space-y-2">
               <Label
                 htmlFor={field.name}
-                className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
+                className="text-xs uppercase tracking-wider text-muted-foreground"
               >
                 Position *
               </Label>
@@ -105,7 +105,7 @@ export function ApplicationForm({
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
                 className={cn(
-                  "h-8 bg-secondary border-border text-foreground text-xs font-mono",
+                  "h-9 bg-secondary border-border text-foreground text-sm",
                   field.state.meta.errors.length > 0 && "border-red-500"
                 )}
               />
@@ -121,7 +121,7 @@ export function ApplicationForm({
             <div className="space-y-2">
               <Label
                 htmlFor={field.name}
-                className="text-xs font-mono uppercase tracking-wider text-muted-foreground"
+                className="text-xs uppercase tracking-wider text-muted-foreground"
               >
                 Job ID
               </Label>
@@ -131,7 +131,7 @@ export function ApplicationForm({
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
-                className="h-8 bg-secondary border-border text-foreground text-xs font-mono"
+                className="h-9 bg-secondary border-border text-foreground text-sm"
               />
             </div>
           )}

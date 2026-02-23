@@ -5,7 +5,7 @@ import { authClient } from "@/lib/auth-client";
 import { useApplication } from "@/hooks/use-application";
 import { useApplicationMutations } from "@/hooks/use-application-mutations";
 import { useMergeTargets } from "@/hooks/use-merge-targets";
-import { PageHeader } from "@/components/applications/page-header";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { ApplicationHeader } from "@/components/applications/application-header";
 import { ApplicationForm } from "@/components/applications/application-form";
 import { ApplicationTimeline } from "@/components/applications/application-timeline";
@@ -114,25 +114,24 @@ function ApplicationDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <header className="flex flex-col gap-8 mb-10">
-          <PageHeader
-            onBack={() => navigate({ to: "/" })}
-            onSignOut={handleSignOut}
-          />
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Subtle background glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] opacity-20 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/40 via-background to-transparent z-0" />
 
-          <ApplicationHeader
-            company={application.company}
-            position={application.position}
-            jobId={application.jobId}
-            currentStatus={state.currentStatus}
-            editingStatus={editingStatus}
-            isPending={mutations.updateApplicationPending}
-            onToggleStatus={() => setEditingStatus(!editingStatus)}
-            onStatusSelect={handleStatusSelect}
-          />
-        </header>
+      <DashboardHeader onSignOut={handleSignOut} />
+
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-8 pb-16 flex flex-col gap-6">
+        <ApplicationHeader
+          company={application.company}
+          position={application.position}
+          jobId={application.jobId}
+          currentStatus={state.currentStatus}
+          editingStatus={editingStatus}
+          isPending={mutations.updateApplicationPending}
+          onBack={() => navigate({ to: "/" })}
+          onToggleStatus={() => setEditingStatus(!editingStatus)}
+          onStatusSelect={handleStatusSelect}
+        />
 
         <ApplicationForm
           initialValues={{
@@ -159,38 +158,38 @@ function ApplicationDetailPage() {
         />
 
         <ApplicationMetadata application={application} />
-
-        <DeleteDialog
-          open={showDeleteDialog}
-          onOpenChange={(open) => {
-            setShowDeleteDialog(open);
-            if (!open) setIgnoreEmails(false);
-          }}
-          onConfirm={() => mutations.deleteApplication({ id: application.id, ignoreEmails })}
-          company={application.company}
-          isPending={mutations.deleteApplicationPending}
-          ignoreEmails={ignoreEmails}
-          onIgnoreEmailsChange={setIgnoreEmails}
-        />
-
-        <MergeDialog
-          open={showMergeDialog}
-          onOpenChange={setShowMergeDialog}
-          onConfirm={() => {
-            const targetId = mergeTargets.filteredTargets.find(
-              (t) => t.id !== id
-            )?.id;
-            if (targetId) handleMerge(targetId);
-          }}
-          targets={mergeTargets.filteredTargets}
-          searchQuery={mergeTargets.searchQuery}
-          onSearchChange={mergeTargets.setSearchQuery}
-          currentCompany={application.company}
-          currentPosition={application.position}
-          isPending={mutations.mergeApplicationsPending}
-          hasTargets={mergeTargets.hasTargets}
-        />
       </div>
+
+      <DeleteDialog
+        open={showDeleteDialog}
+        onOpenChange={(open) => {
+          setShowDeleteDialog(open);
+          if (!open) setIgnoreEmails(false);
+        }}
+        onConfirm={() => mutations.deleteApplication({ id: application.id, ignoreEmails })}
+        company={application.company}
+        isPending={mutations.deleteApplicationPending}
+        ignoreEmails={ignoreEmails}
+        onIgnoreEmailsChange={setIgnoreEmails}
+      />
+
+      <MergeDialog
+        open={showMergeDialog}
+        onOpenChange={setShowMergeDialog}
+        onConfirm={() => {
+          const targetId = mergeTargets.filteredTargets.find(
+            (t) => t.id !== id
+          )?.id;
+          if (targetId) handleMerge(targetId);
+        }}
+        targets={mergeTargets.filteredTargets}
+        searchQuery={mergeTargets.searchQuery}
+        onSearchChange={mergeTargets.setSearchQuery}
+        currentCompany={application.company}
+        currentPosition={application.position}
+        isPending={mutations.mergeApplicationsPending}
+        hasTargets={mergeTargets.hasTargets}
+      />
     </div>
   );
 }

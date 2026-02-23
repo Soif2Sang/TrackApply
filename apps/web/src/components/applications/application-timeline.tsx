@@ -31,6 +31,18 @@ interface ApplicationTimelineProps {
   isDiverging?: boolean;
 }
 
+const DOT_COLOR: Record<string, string> = {
+  RECRUITMENT_ACK: "bg-blue-400",
+  NEXT_STEP: "bg-emerald-400",
+  DISAPPROVAL: "bg-red-400",
+};
+
+const RING_COLOR: Record<string, string> = {
+  RECRUITMENT_ACK: "border-blue-400/40",
+  NEXT_STEP: "border-emerald-400/40",
+  DISAPPROVAL: "border-red-400/40",
+};
+
 export function ApplicationTimeline({
   events,
   classificationDrafts,
@@ -46,19 +58,19 @@ export function ApplicationTimeline({
 
   if (sortedEvents.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border border-border rounded-lg bg-card">
+      <div className="rounded-2xl border border-border/60 bg-card/30 flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Mail className="h-8 w-8 mb-3 opacity-40" />
-        <p className="text-sm font-mono">No emails found</p>
+        <p className="text-sm">No emails found</p>
       </div>
     );
   }
 
   return (
-    <div className="mb-8">
+    <div className="rounded-2xl border border-border/60 bg-card/30 p-6">
       <div className="flex items-center gap-3 mb-6">
         <Mail className="h-4 w-4 text-muted-foreground" />
         <h2 className="text-sm font-medium text-foreground">Email Timeline</h2>
-        <span className="text-xs font-mono text-muted-foreground">
+        <span className="text-xs text-muted-foreground">
           {sortedEvents.length} emails
         </span>
       </div>
@@ -68,6 +80,8 @@ export function ApplicationTimeline({
           const currentClassification =
             classificationDrafts[event.id] || event.classification;
           const isLast = index === sortedEvents.length - 1;
+          const dotColor = DOT_COLOR[currentClassification] ?? "bg-muted-foreground";
+          const ringColor = RING_COLOR[currentClassification] ?? "border-border";
 
           return (
             <div key={event.id} className="relative pl-8 pb-8 last:pb-0">
@@ -77,8 +91,11 @@ export function ApplicationTimeline({
               )}
 
               {/* Timeline dot */}
-              <div className="absolute left-0 top-[6px] h-[22px] w-[22px] rounded-full border-2 border-border bg-card flex items-center justify-center">
-                <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+              <div className={cn(
+                "absolute left-0 top-[6px] h-[22px] w-[22px] rounded-full border-2 bg-card flex items-center justify-center transition-colors",
+                ringColor
+              )}>
+                <div className={cn("h-2 w-2 rounded-full transition-colors", dotColor)} />
               </div>
 
               <div className="flex flex-col gap-3">
