@@ -28,11 +28,11 @@ export function DashboardHeader({ onSignOut }: DashboardHeaderProps) {
 
       <div className="flex items-center gap-2">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={onSignOut}
-          className="text-muted-foreground hover:text-foreground hover:bg-muted h-9 gap-2 font-mono text-xs"
-        >
+          className="shadow-sm"
+        >  
           <LogOut className="h-3.5 w-3.5" />
           Disconnect
         </Button>
