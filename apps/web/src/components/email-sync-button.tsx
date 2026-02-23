@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar, Loader2, RefreshCw } from "lucide-react";
 import { trpc } from "@/utils/trpc";
@@ -94,16 +93,16 @@ export function EmailSyncButton() {
 
   return (
     <div className="flex items-center gap-2">
-      <Badge variant="secondary" className="whitespace-nowrap">
+      <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
         Analyze queue: {queueStats?.pending ?? 0} pending
         {queueStats?.active ? ` • ${queueStats.active} active` : ""}
-      </Badge>
+      </span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="ghost"
             size="sm"
-            className="gap-2"
+            className="gap-2 font-mono text-xs h-8 text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="h-4 w-4" />
             Sync Emails from Date

@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EmailSyncButton } from "@/components/email-sync-button";
@@ -48,12 +48,12 @@ export function SearchBar({
       <div className="flex items-center gap-2">
         <EmailSyncButton />
         <Button
-          variant="outline"
+          variant="default"
           size="sm"
           onClick={onAddClick}
-          className="gap-2 border-border text-foreground hover:bg-muted"
+          className="gap-2 font-mono text-xs h-8"
         >
-          <span className="text-lg leading-none">+</span>
+          <Plus className="h-3.5 w-3.5" />
           Add Application
         </Button>
       </div>
