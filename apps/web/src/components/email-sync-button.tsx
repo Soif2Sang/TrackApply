@@ -93,10 +93,6 @@ export function EmailSyncButton() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="font-mono text-xs text-muted-foreground whitespace-nowrap">
-        Analyze queue: {queueStats?.pending ?? 0} pending
-        {queueStats?.active ? ` • ${queueStats.active} active` : ""}
-      </span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
