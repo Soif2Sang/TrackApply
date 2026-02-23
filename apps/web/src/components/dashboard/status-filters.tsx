@@ -25,7 +25,7 @@ export function StatusFilters({
       <button
         onClick={onClearAll}
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono transition-colors",
+          "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs  transition-colors",
           activeStatuses.size === 0
             ? "bg-foreground text-background"
             : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -56,7 +56,7 @@ export function StatusFilters({
             key={status}
             onClick={() => onToggleStatus(status)}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-mono transition-colors",
+              "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs  transition-colors",
               isActive
                 ? "bg-foreground text-background"
                 : "bg-secondary text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -78,7 +78,7 @@ export function StatusFilters({
       })}
 
       {hasFilters && (
-        <span className="text-xs text-muted-foreground font-mono ml-2">
+        <span className="text-xs text-muted-foreground  ml-2">
           {filteredCount} of {totalCount} applications
         </span>
       )}

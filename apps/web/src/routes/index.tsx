@@ -78,15 +78,20 @@ function HomeComponent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        <header className="flex flex-col gap-8 mb-10">
-          <DashboardHeader onSignOut={handleSignOut} />
+    <div className="min-h-screen bg-background text-foreground relative overflow-hidden">
+      {/* Subtle background glow — same as landing page */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[400px] opacity-20 pointer-events-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/40 via-background to-transparent z-0" />
 
-          <section aria-label="Gmail connection">
-            <GmailConnection />
-          </section>
+      <DashboardHeader onSignOut={handleSignOut} />
 
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-8 pb-16 flex flex-col gap-6">
+        {/* Gmail connection */}
+        <div className="rounded-2xl border border-border/60 bg-card/60 shadow-sm overflow-hidden backdrop-blur-sm">
+          <GmailConnection />
+        </div>
+
+        {/* Toolbar: search + sync + add */}
+        <div className="flex flex-col gap-3">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -94,7 +99,6 @@ function HomeComponent() {
             hasFilters={hasFilters}
             onAddClick={() => createApplication.setShowDialog(true)}
           />
-
           <StatusFilters
             activeStatuses={activeStatuses}
             onToggleStatus={toggleStatus}
@@ -104,14 +108,15 @@ function HomeComponent() {
             filteredCount={filteredCount}
             hasFilters={hasFilters}
           />
-        </header>
+        </div>
 
-        <section aria-label="Applications list">
+        {/* Applications table */}
+        <div className="rounded-2xl border border-border/60 bg-card/30 shadow-sm overflow-hidden">
           <JobApplicationsTable
             searchQuery={searchQuery}
             statusFilter={Array.from(activeStatuses)}
           />
-        </section>
+        </div>
       </div>
 
       <AddApplicationDialog
