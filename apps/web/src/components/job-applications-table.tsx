@@ -209,7 +209,7 @@ export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: Jo
                 <TableCell>
                   <StatusBadge status={app.currentStatus} />
                 </TableCell>
-                <TableCell className="text-muted-foreground text-sm font-mono hidden sm:table-cell">
+                <TableCell className="text-muted-foreground text-sm font-mono">
                   {formatDate(app.appliedAt)}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm font-mono text-right">
