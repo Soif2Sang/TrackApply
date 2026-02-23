@@ -166,7 +166,7 @@ export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: Jo
               </span>
             </TableHead>
             <TableHead 
-              className="text-muted-foreground font-mono text-xs uppercase tracking-wider hidden sm:table-cell cursor-pointer group/sort"
+              className="text-muted-foreground font-mono text-xs uppercase tracking-wider cursor-pointer group/sort"
               onClick={() => handleSort("appliedDate")}
             >
               <span className="flex items-center">
