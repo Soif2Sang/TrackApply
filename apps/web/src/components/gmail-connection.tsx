@@ -193,7 +193,7 @@ export function GmailConnection() {
 
   if (isLoading && !isConnecting) {
     return (
-      <div className="rounded-lg border border-border bg-card p-4">
+      <div className="p-4">
         <div className="flex items-center justify-center py-2">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
@@ -213,17 +213,17 @@ export function GmailConnection() {
     googleClientId.trim().length > 0 && googleClientSecret.trim().length > 0;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col">
       <Accordion
         type="single"
         collapsible
         value={setupAccordionValue}
         onValueChange={setSetupAccordionValue}
-        className="w-full rounded-lg border"
+        className="w-full"
       >
         <AccordionItem
           value="google-setup"
-          className="border-b last:border-b-0"
+          className="border-b-0"
         >
           <AccordionTrigger className="px-5 py-4 hover:no-underline hover:bg-muted/50 transition-colors">
             <div className="flex items-center gap-3">

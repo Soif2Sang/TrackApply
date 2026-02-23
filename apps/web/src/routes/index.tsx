@@ -111,7 +111,7 @@ function HomeComponent() {
         </div>
 
         {/* Applications table */}
-        <div className="rounded-2xl border border-border/60 bg-card/30 shadow-sm overflow-hidden">
+        <div className="rounded-2xl border border-border/60 bg-card/30 overflow-hidden">
           <JobApplicationsTable
             searchQuery={searchQuery}
             statusFilter={Array.from(activeStatuses)}
