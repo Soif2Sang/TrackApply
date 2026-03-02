@@ -57,7 +57,7 @@ export function GmailConnection() {
         if (!data.configured) {
           setCurrentStep(0);
         } else {
-          setCurrentStep(4);
+          setCurrentStep(5);
         }
         hasSetInitialStep.current = true;
       }
@@ -148,7 +148,7 @@ export function GmailConnection() {
 
       toast.success("OAuth credentials saved");
       setGoogleClientSecret("");
-      setCurrentStep(4);
+      setCurrentStep(5);
       await fetchStatus();
     } catch {
       toast.error("Failed to save OAuth credentials");
@@ -204,6 +204,7 @@ export function GmailConnection() {
   const steps = [
     { label: "Create Project", description: "Create a Google Cloud project" },
     { label: "OAuth Client", description: "Configure OAuth credentials" },
+    { label: "Enable Gmail API", description: "Enable Gmail API for project" },
     { label: "Test User", description: "Add test user" },
     { label: "Enter Credentials", description: "Input Client ID & Secret" },
     { label: "Connect Gmail", description: "Link your Gmail account" },
@@ -248,19 +249,19 @@ export function GmailConnection() {
                       <div className="flex flex-col items-center">
                         <div
                           className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors cursor-pointer hover:opacity-80 ${
-                            index < currentStep || (index === 4 && isConnected)
+                            index < currentStep || (index === 5 && isConnected)
                               ? "bg-foreground text-background"
                               : index === currentStep
                                 ? "bg-foreground text-background"
                                 : "bg-muted text-muted-foreground"
                           }`}
                           onClick={() => {
-                            if (index <= currentStep || (index === 4 && isConfigured)) {
+                            if (index <= currentStep || (index === 5 && isConfigured)) {
                               setCurrentStep(index);
                             }
                           }}
                         >
-                          {index < currentStep || (index === 4 && isConnected) ? (
+                          {index < currentStep || (index === 5 && isConnected) ? (
                             <CheckIcon />
                           ) : (
                             index + 1
@@ -269,7 +270,7 @@ export function GmailConnection() {
                         {index < steps.length - 1 && (
                           <div
                             className={`w-px flex-1 min-h-[24px] transition-colors ${
-                              index < currentStep || (index < 4 && isConfigured)
+                              index < currentStep || (index < 5 && isConfigured)
                                 ? "bg-foreground"
                                 : "bg-border"
                             }`}
@@ -279,12 +280,12 @@ export function GmailConnection() {
                       <div className="ml-3 pb-5">
                         <p
                           className={`text-xs font-medium transition-colors cursor-pointer hover:opacity-80 ${
-                            index <= currentStep || (index === 4 && isConnected)
+                            index <= currentStep || (index === 5 && isConnected)
                               ? "text-foreground"
                               : "text-muted-foreground"
                           }`}
                           onClick={() => {
-                            if (index <= currentStep || (index === 4 && isConfigured)) {
+                            if (index <= currentStep || (index === 5 && isConfigured)) {
                               setCurrentStep(index);
                             }
                           }}
@@ -354,17 +355,31 @@ export function GmailConnection() {
                     </h3>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Go to <strong>API & Services → Credentials</strong> and create an OAuth client ID. Select <strong>Web application</strong> as the application type.
+                    Configure the OAuth consent screen first, then create an OAuth client ID. Go to <strong>API & Services → Credentials</strong> and select <strong>Web application</strong> as the application type.
                   </p>
-                  <div className="rounded-md bg-muted/50 p-3 border border-border space-y-2">
-                    <p className="text-[11px] font-medium text-foreground">
-                      Add these Authorized Redirect URIs:
-                    </p>
-                    <ul className="text-[11px] text-muted-foreground space-y-1 font-mono">
-                      <li>{serverUrl}</li>
-                      <li>{serverUrl}/api/auth/callback/google</li>
-                      <li>{serverUrl}/auth/gmail/callback</li>
-                    </ul>
+                  <div className="rounded-md bg-muted/50 p-3 border border-border space-y-3">
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground mb-1.5">
+                        Configure OAuth consent screen (first time only):
+                      </p>
+                      <ul className="text-[11px] text-muted-foreground space-y-1 list-disc list-inside">
+                        <li>Go to <strong>APIs & Services → OAuth consent screen</strong></li>
+                        <li>Choose <strong>External</strong> (or <strong>Internal</strong> if using G Suite/Workspace org)</li>
+                        <li>Fill in app name, user support email, and developer contact email</li>
+                        <li>Add required scopes you intend to request (see recommended scopes below)</li>
+                        <li>Add test users (your Google accounts) so only they can grant access prior to verification</li>
+                      </ul>
+                    </div>
+                    <div className="border-t border-border pt-3">
+                      <p className="text-[11px] font-medium text-foreground mb-1.5">
+                        Create OAuth Client and add these Authorized Redirect URIs:
+                      </p>
+                      <ul className="text-[11px] text-muted-foreground space-y-1 font-mono">
+                        <li>{serverUrl}</li>
+                        <li>{serverUrl}/api/auth/callback/google</li>
+                        <li>{serverUrl}/auth/gmail/callback</li>
+                      </ul>
+                    </div>
                   </div>
                   <div className="rounded-md bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3">
                     <p className="text-[11px] text-amber-800 dark:text-amber-200">
@@ -408,16 +423,23 @@ export function GmailConnection() {
                       <span className="text-xs font-semibold">3</span>
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">
-                      Add Test User
+                      Enable Gmail API
                     </h3>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    While your app is in testing mode, you must add test users. Go to <strong>Audience</strong> and add your email address as a test user.
+                    Enable the Gmail API for your Google Cloud project to allow your app to access Gmail data.
                   </p>
-                  <div className="rounded-md bg-muted/50 p-3 border border-border">
-                    <p className="text-[11px] text-muted-foreground">
-                      This allows you to test the OAuth flow before publishing your app.
-                    </p>
+                  <div className="rounded-md bg-muted/50 p-3 border border-border space-y-3">
+                    <div>
+                      <p className="text-[11px] font-medium text-foreground mb-1.5">
+                        Steps to enable:
+                      </p>
+                      <ul className="text-[11px] text-muted-foreground space-y-1 list-disc list-inside">
+                        <li>Open the Gmail API library page (link below)</li>
+                        <li>Select your project from the top-left project selector</li>
+                        <li>Click <strong>Enable</strong></li>
+                      </ul>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     <Button
@@ -430,12 +452,12 @@ export function GmailConnection() {
                       Back
                     </Button>
                     <a
-                      href="https://console.cloud.google.com/auth/audience"
+                      href="https://console.cloud.google.com/apis/library/gmail.googleapis.com?hl=fr"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline mr-4"
                     >
-                      Open Audience
+                      Open Gmail API Library
                     </a>
                     <Button
                       onClick={() => setCurrentStep(3)}
@@ -454,6 +476,54 @@ export function GmailConnection() {
                   <div className="flex items-center gap-2 mb-1">
                     <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
                       <span className="text-xs font-semibold">4</span>
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Add Test User
+                    </h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    While your app is in testing mode, you must add test users. Go to <strong>Audience</strong> and add your email address as a test user.
+                  </p>
+                  <div className="rounded-md bg-muted/50 p-3 border border-border">
+                    <p className="text-[11px] text-muted-foreground">
+                      This allows you to test the OAuth flow before publishing your app.
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCurrentStep(2)}
+                      className="text-muted-foreground"
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                      Back
+                    </Button>
+                    <a
+                      href="https://console.cloud.google.com/auth/audience"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline mr-4"
+                    >
+                      Open Audience
+                    </a>
+                    <Button
+                      onClick={() => setCurrentStep(4)}
+                      size="sm"
+                      className="min-w-[100px]"
+                    >
+                      Next
+                      <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 4 && (
+                <div className="space-y-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
+                      <span className="text-xs font-semibold">5</span>
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">
                       Enter OAuth Credentials
@@ -511,26 +581,26 @@ export function GmailConnection() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setCurrentStep(2)}
+                      onClick={() => setCurrentStep(3)}
                       className="text-muted-foreground"
                     >
                       <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
                       Back
                     </Button>
                     <Button
-                      onClick={handleSaveConfig}
                       disabled={!canSave || isSavingConfig}
+                      onClick={handleSaveConfig}
                       size="sm"
                       className="min-w-[100px]"
                     >
                       {isSavingConfig ? (
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          Saving
-                        </span>
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          Saving...
+                        </>
                       ) : (
                         <>
-                          Save & Continue
+                          Save & Next
                           <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
                         </>
                       )}
@@ -539,11 +609,11 @@ export function GmailConnection() {
                 </div>
               )}
 
-              {currentStep === 4 && (
+              {currentStep === 5 && (
                 <div className="space-y-5">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
-                      <span className="text-xs font-semibold">5</span>
+                      <span className="text-xs font-semibold">6</span>
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">
                       Connect Gmail
@@ -581,7 +651,7 @@ export function GmailConnection() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setCurrentStep(3)}
+                          onClick={() => setCurrentStep(4)}
                           className="text-muted-foreground"
                         >
                           <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
