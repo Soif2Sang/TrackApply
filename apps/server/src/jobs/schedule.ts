@@ -67,7 +67,7 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
     return { synced: 0 };
   }
 
-  const query = `after:${Math.floor(fromDate.getTime() / 1000)}`;
+  const query = `in:inbox after:${Math.floor(fromDate.getTime() / 1000)}`;
   const pageSize = parseInt(process.env.EMAIL_SYNC_PAGE_SIZE || "100", 10);
   const maxTotal = parseInt(process.env.EMAIL_SYNC_MAX_TOTAL || "0", 10);
 
