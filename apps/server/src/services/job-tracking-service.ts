@@ -7,7 +7,7 @@ import {
   eventTypeEnum,
   applicationStatusEnum,
 } from "../db/schema/job-applications";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export interface ProcessEmailInput {
   emailId: string;
@@ -36,7 +36,101 @@ export interface ProcessEmailResult {
   message: string;
 }
 
-// Normalize company and position for fuzzy matching
+// ---------------------------------------------------------------------------
+// Status ordering — higher index = more advanced in the hiring process.
+// A status can never move to a lower rank via replay.
+// ---------------------------------------------------------------------------
+const STATUS_RANK: Record<(typeof applicationStatusEnum)[number], number> = {
+  applied:      0,
+  acknowledged: 1,
+  screening:    2,
+  interview:    3,
+  technical:    4,
+  offer:        5,
+  rejected:     6,
+  withdrawn:    7,
+};
+
+function isMoreAdvanced(
+  candidate: (typeof applicationStatusEnum)[number],
+  current: (typeof applicationStatusEnum)[number]
+): boolean {
+  // "rejected" and "withdrawn" are terminal — never overwrite them.
+  if (current === "rejected" || current === "withdrawn") return false;
+  return STATUS_RANK[candidate] > STATUS_RANK[current];
+}
+
+// ---------------------------------------------------------------------------
+// Map a single classification + current status → next status.
+// Always called as part of a chronological replay, never in isolation.
+// ---------------------------------------------------------------------------
+function classificationToNextStatus(
+  classification: (typeof classificationEnum)[number],
+  currentStatus: (typeof applicationStatusEnum)[number]
+): (typeof applicationStatusEnum)[number] {
+  switch (classification) {
+    case "RECRUITMENT_ACK":
+      // Only move to "acknowledged" if we haven't progressed further yet.
+      return isMoreAdvanced("acknowledged", currentStatus) ? "acknowledged" : currentStatus;
+
+    case "NEXT_STEP": {
+      // Advance exactly one step from the current position.
+      const progressionMap: Partial<Record<(typeof applicationStatusEnum)[number], (typeof applicationStatusEnum)[number]>> = {
+        applied:      "screening",
+        acknowledged: "screening",
+        screening:    "interview",
+        interview:    "technical",
+        technical:    "offer",
+      };
+      const next = progressionMap[currentStatus];
+      return next ?? currentStatus;
+    }
+
+    case "DISAPPROVAL":
+      return isMoreAdvanced("rejected", currentStatus) ? "rejected" : currentStatus;
+
+    default:
+      return currentStatus;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Exported helper: replay all events for an application in chronological
+// order and derive the correct current status from scratch.
+// Safe to call after any mutation (insert, update, merge, diverge).
+// ---------------------------------------------------------------------------
+export function replayEventsToStatus(
+  events: Array<{ classification: (typeof classificationEnum)[number]; date: string }>
+): (typeof applicationStatusEnum)[number] {
+  if (events.length === 0) return "applied";
+
+  const sorted = [...events].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  let status: (typeof applicationStatusEnum)[number] = "applied";
+  for (const event of sorted) {
+    status = classificationToNextStatus(event.classification, status);
+  }
+  return status;
+}
+
+// ---------------------------------------------------------------------------
+// Map classification → eventType (replaces the previous silent no-op).
+// ---------------------------------------------------------------------------
+export function classificationToEventType(
+  classification: (typeof classificationEnum)[number]
+): (typeof eventTypeEnum)[number] {
+  switch (classification) {
+    case "RECRUITMENT_ACK": return "recruitment_ack";
+    case "NEXT_STEP":       return "next_step";
+    case "DISAPPROVAL":     return "disapproval";
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Text normalisation for fuzzy matching.
+// ---------------------------------------------------------------------------
 function normalizeText(text: string): string {
   return text
     .toLowerCase()
@@ -45,17 +139,53 @@ function normalizeText(text: string): string {
     .replace(/\s+/g, " ");
 }
 
-// Find matching application using intelligent logic
+// Dice-coefficient similarity between two normalised strings (word-level).
+// Returns a value in [0, 1].
+function diceSimilarity(a: string, b: string): number {
+  const tokensA = new Set(a.split(" "));
+  const tokensB = new Set(b.split(" "));
+  if (tokensA.size === 0 && tokensB.size === 0) return 1;
+  if (tokensA.size === 0 || tokensB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const token of tokensA) {
+    if (tokensB.has(token)) intersection++;
+  }
+  return (2 * intersection) / (tokensA.size + tokensB.size);
+}
+
+// Thresholds — adjust if matching proves too loose / too strict in practice.
+const COMPANY_EXACT_THRESHOLD  = 1.0;
+const COMPANY_FUZZY_THRESHOLD  = 0.8;
+const POSITION_FUZZY_THRESHOLD = 0.6;
+
+// ---------------------------------------------------------------------------
+// Application matching — priority order:
+//   1. threadId  (most reliable Gmail signal)
+//   2. jobId     (explicit reference number)
+//   3. Exact company + position match
+//   4. High-similarity fuzzy company + position match
+// ---------------------------------------------------------------------------
 async function findMatchingApplication(
   userId: string,
+  threadId: string | undefined | null,
   company: string,
   position: string,
   jobId?: string | null
 ) {
-  const normalizedCompany = normalizeText(company);
-  const normalizedPosition = normalizeText(position);
+  // Strategy 1: thread-based match — any event in the same Gmail thread
+  // belongs to the same application by definition.
+  if (threadId) {
+    const eventInThread = await db.query.applicationEvents.findFirst({
+      where: eq(applicationEvents.threadId, threadId),
+      with: { application: true },
+    });
+    if (eventInThread?.application?.userId === userId) {
+      return eventInThread.application;
+    }
+  }
 
-  // Strategy 1: Exact match by job_id if provided
+  // Strategy 2: explicit job reference number.
   if (jobId) {
     const matchByJobId = await db.query.jobApplications.findFirst({
       where: and(
@@ -66,95 +196,63 @@ async function findMatchingApplication(
     if (matchByJobId) return matchByJobId;
   }
 
-  // Strategy 2: Match by exact company + position (normalized)
+  // Strategies 3 & 4: text-based matching.
   const isUnknownCompany = !company || company === "Unknown Company";
-  if (!isUnknownCompany) {
-    const allApplications = await db.query.jobApplications.findMany({
-      where: eq(jobApplications.userId, userId),
-    });
+  if (isUnknownCompany) return null;
 
-    for (const app of allApplications) {
-      const appCompany = normalizeText(app.company);
-      const appPosition = app.position ? normalizeText(app.position) : "";
+  const allApplications = await db.query.jobApplications.findMany({
+    where: eq(jobApplications.userId, userId),
+  });
 
-      const companyMatch =
-        appCompany === normalizedCompany ||
-        appCompany.includes(normalizedCompany) ||
-        normalizedCompany.includes(appCompany);
+  const normalizedCompany  = normalizeText(company);
+  const normalizedPosition = normalizeText(position);
+  const isUnknownPosition  = !position || position === "Unknown Position";
 
-      const isUnknownPosition = !position || position === "Unknown Position";
-      const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
-      const positionMatch =
-        isUnknownPosition ||
-        isAppPositionUnknown ||
-        appPosition === normalizedPosition ||
-        appPosition.includes(normalizedPosition) ||
-        normalizedPosition.includes(appPosition);
+  let bestMatch: (typeof allApplications)[number] | null = null;
+  let bestScore = -1;
 
-      if (companyMatch && positionMatch) {
-        return app;
-      }
+  for (const app of allApplications) {
+    const appCompany  = normalizeText(app.company);
+    const appPosition = normalizeText(app.position ?? "");
+
+    const companySimilarity = diceSimilarity(appCompany, normalizedCompany);
+
+    // Company must be at least fuzzy-similar to continue.
+    if (companySimilarity < COMPANY_FUZZY_THRESHOLD) continue;
+
+    const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
+    const positionSimilarity =
+      isUnknownPosition || isAppPositionUnknown
+        ? 1 // treat unknown on either side as a wildcard
+        : diceSimilarity(appPosition, normalizedPosition);
+
+    if (positionSimilarity < POSITION_FUZZY_THRESHOLD) continue;
+
+    // Prefer exact company match; secondary sort by position similarity.
+    const score =
+      (companySimilarity >= COMPANY_EXACT_THRESHOLD ? 1 : 0) * 10 +
+      companySimilarity +
+      positionSimilarity;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = app;
     }
   }
 
-  return null;
+  return bestMatch;
 }
 
-// Map classification to application status based on current status
-function determineNewStatus(
-  classification: (typeof classificationEnum)[number],
-  currentStatus?: (typeof applicationStatusEnum)[number]
-): (typeof applicationStatusEnum)[number] {
-  switch (classification) {
-    case "RECRUITMENT_ACK":
-      return "acknowledged";
-
-    case "NEXT_STEP":
-      if (currentStatus === "applied" || currentStatus === "acknowledged") {
-        return "screening";
-      } else if (currentStatus === "screening") {
-        return "interview";
-      } else if (currentStatus === "interview") {
-        return "technical";
-      } else if (currentStatus === "technical") {
-        return "offer";
-      }
-      return "screening";
-
-    case "DISAPPROVAL":
-      return "rejected";
-
-    default:
-      return currentStatus || "applied";
-  }
-}
-
-// Recalculate status based on most recent event by email date
-async function recalculateStatusFromEvents(
-  applicationId: string
-): Promise<(typeof applicationStatusEnum)[number]> {
-  const events = await db.query.applicationEvents.findMany({
-    where: eq(applicationEvents.applicationId, applicationId),
-    orderBy: (events, { desc }) => [desc(events.date)],
-  });
-
-  if (events.length === 0) {
-    return "applied";
-  }
-
-  const mostRecentEvent = events[0];
-  return determineNewStatus(mostRecentEvent.classification);
-}
-
-// Check if event already exists (deduplication)
+// ---------------------------------------------------------------------------
+// Deduplication helpers.
+// ---------------------------------------------------------------------------
 async function eventExists(emailId: string): Promise<boolean> {
-  const existingEvent = await db.query.applicationEvents.findFirst({
+  const existing = await db.query.applicationEvents.findFirst({
     where: eq(applicationEvents.emailId, emailId),
   });
-  return !!existingEvent;
+  return !!existing;
 }
 
-// Check if email ID is in the ignore list
 async function isEmailIgnored(userId: string, emailId: string): Promise<boolean> {
   const ignored = await db.query.ignoredEmails.findFirst({
     where: and(
@@ -165,7 +263,9 @@ async function isEmailIgnored(userId: string, emailId: string): Promise<boolean>
   return !!ignored;
 }
 
-// Main function to process recruitment email
+// ---------------------------------------------------------------------------
+// Main entry point.
+// ---------------------------------------------------------------------------
 export async function processRecruitmentEmail(
   userId: string,
   input: ProcessEmailInput
@@ -174,68 +274,60 @@ export async function processRecruitmentEmail(
     console.log(`[PROCESS-EMAIL] Processing email ${input.emailId} for user ${userId}`);
     console.log(`[PROCESS-EMAIL] Company: ${input.company}, Position: ${input.position}`);
 
-    // Check if email ID is in the ignore list
+    // 1. Ignore-list check.
     if (await isEmailIgnored(userId, input.emailId)) {
-      console.log(`[PROCESS-EMAIL] Email ${input.emailId} is ignored - skipping`);
+      console.log(`[PROCESS-EMAIL] Email ${input.emailId} is ignored — skipping`);
       return {
         success: true,
         applicationId: "",
         isNewApplication: false,
         status: "",
         skipped: true,
-        message: `Email ${input.emailId} is in the ignore list - skipping`,
+        message: `Email ${input.emailId} is in the ignore list — skipping`,
       };
     }
 
-    // Check if event already exists BEFORE finding/creating application
-    // This prevents creating duplicate applications for emails we already processed
-    const eventAlreadyExists = await eventExists(input.emailId);
-    console.log(`[PROCESS-EMAIL] Event exists check for ${input.emailId}: ${eventAlreadyExists}`);
-    
-    if (eventAlreadyExists) {
-      console.log(`[PROCESS-EMAIL] Event already exists for email ${input.emailId} - skipping`);
-      // Find which application this event belongs to for the return value
+    // 2. Deduplication check — must happen before any insert.
+    if (await eventExists(input.emailId)) {
+      console.log(`[PROCESS-EMAIL] Event already exists for email ${input.emailId} — skipping`);
       const existingEvent = await db.query.applicationEvents.findFirst({
         where: eq(applicationEvents.emailId, input.emailId),
-        with: {
-          application: true,
-        },
+        with: { application: true },
       });
-      
       return {
         success: true,
         applicationId: existingEvent?.application?.id || "",
         isNewApplication: false,
         status: existingEvent?.application?.currentStatus || "",
         skipped: true,
-        message: `Event already exists for ${input.position} at ${input.company} - skipping duplicate`,
+        message: `Event already exists for ${input.position} at ${input.company} — skipping duplicate`,
       };
     }
 
-    // Find existing application or prepare to create new one
+    // 3. Find or create the matching application.
     let application = await findMatchingApplication(
       userId,
+      input.threadId,
       input.company || "Unknown Company",
       input.position || "Unknown Position",
       input.jobId
     );
-    
-    console.log(`[PROCESS-EMAIL] Found matching application: ${application ? application.id : 'NONE'}`);
+
+    console.log(`[PROCESS-EMAIL] Found matching application: ${application ? application.id : "NONE"}`);
 
     const isNewApplication = !application;
 
     if (!application) {
-      // Create new application
       console.log(`[PROCESS-EMAIL] Creating new application for ${input.position} at ${input.company}`);
       const [newApp] = await db
         .insert(jobApplications)
         .values({
           userId,
-          company: input.company || "Unknown Company",
-          position: input.position || "Unknown Position",
-          jobId: input.jobId || null,
+          company:       input.company  || "Unknown Company",
+          position:      input.position || "Unknown Position",
+          jobId:         input.jobId    || null,
           currentStatus: "applied",
-          source: "email",
+          source:        "email",
         })
         .returning();
 
@@ -245,35 +337,36 @@ export async function processRecruitmentEmail(
       console.log(`[PROCESS-EMAIL] Using existing application: ${application.id}`);
     }
 
-    // Create event record
-    const eventType = input.classification.toLowerCase().replace("_", "_") as (typeof eventTypeEnum)[number];
-
+    // 4. Insert the new event.
     await db.insert(applicationEvents).values({
       applicationId: application.id,
-      eventType,
+      eventType:     classificationToEventType(input.classification),
       classification: input.classification,
-      emailId: input.emailId,
-      threadId: input.threadId || null,
-      messageId: input.messageId || null,
-      subject: input.subject,
-      from: input.from,
-      to: input.to,
-      date: input.date,
-      confidence: input.confidence || null,
-      rawPayload: input.rawPayload || (input as unknown as Record<string, unknown>),
+      emailId:       input.emailId,
+      threadId:      input.threadId  || null,
+      messageId:     input.messageId || null,
+      subject:       input.subject,
+      from:          input.from,
+      to:            input.to,
+      date:          input.date,
+      confidence:    input.confidence || null,
+      rawPayload:    input.rawPayload || (input as unknown as Record<string, unknown>),
     });
 
-    // Recalculate status based on the most recent email date
-    const recalculatedStatus = await recalculateStatusFromEvents(application.id);
+    // 5. Replay all events (including the one just inserted) to derive status.
+    const allEvents = await db.query.applicationEvents.findMany({
+      where: eq(applicationEvents.applicationId, application.id),
+    });
 
-    // Update application status
+    const recalculatedStatus = replayEventsToStatus(allEvents);
+
+    // 6. Persist the recalculated status.
     await db
       .update(jobApplications)
-      .set({
-        currentStatus: recalculatedStatus,
-        updatedAt: new Date(),
-      })
+      .set({ currentStatus: recalculatedStatus, updatedAt: new Date() })
       .where(eq(jobApplications.id, application.id));
+
+    console.log(`[PROCESS-EMAIL] Status set to "${recalculatedStatus}" for application ${application.id}`);
 
     return {
       success: true,
@@ -285,7 +378,7 @@ export async function processRecruitmentEmail(
         : `Updated existing application for ${input.position} at ${input.company}`,
     };
   } catch (error) {
-    console.error("Error processing recruitment email:", error);
+    console.error("[PROCESS-EMAIL] Error processing recruitment email:", error);
     throw error;
   }
 }

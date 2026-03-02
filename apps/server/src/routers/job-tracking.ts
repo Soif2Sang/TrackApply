@@ -15,32 +15,7 @@ import { TRPCError } from "@trpc/server";
 import { t } from "../lib/trpc";
 import { triggerManualSync } from "../jobs/schedule";
 import { PG_BOSS_SCHEMA } from "../jobs/pgboss";
-
-function mapClassificationToEventType(
-  classification: (typeof classificationEnum)[number]
-): (typeof eventTypeEnum)[number] {
-  switch (classification) {
-    case "RECRUITMENT_ACK":
-      return "recruitment_ack";
-    case "NEXT_STEP":
-      return "next_step";
-    case "DISAPPROVAL":
-      return "disapproval";
-  }
-}
-
-function mapClassificationToStatus(
-  classification: (typeof classificationEnum)[number]
-): (typeof applicationStatusEnum)[number] {
-  switch (classification) {
-    case "RECRUITMENT_ACK":
-      return "acknowledged";
-    case "NEXT_STEP":
-      return "screening";
-    case "DISAPPROVAL":
-      return "rejected";
-  }
-}
+import { replayEventsToStatus, classificationToEventType } from "../services/job-tracking-service";
 
 // Require authentication middleware
 const requireAuth = t.procedure.use(({ ctx, next }) => {
@@ -305,7 +280,7 @@ export const jobTrackingRouter = t.router({
         .update(applicationEvents)
         .set({
           classification: input.classification,
-          eventType: mapClassificationToEventType(input.classification),
+          eventType: classificationToEventType(input.classification),
         })
         .where(eq(applicationEvents.id, input.eventId));
 
@@ -313,13 +288,7 @@ export const jobTrackingRouter = t.router({
         where: eq(applicationEvents.applicationId, input.applicationId),
       });
 
-      const latestEvent = events.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-      )[0];
-
-      const newStatus = latestEvent
-        ? mapClassificationToStatus(latestEvent.classification)
-        : "applied";
+      const newStatus = replayEventsToStatus(events);
 
       await db
         .update(jobApplications)
@@ -475,13 +444,8 @@ export const jobTrackingRouter = t.router({
         where: eq(applicationEvents.applicationId, input.targetApplicationId),
       });
 
-      // Find latest event to determine new status
-      const latestEvent = allEvents.length > 0
-        ? allEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-        : null;
-
-      const newStatus = latestEvent
-        ? mapClassificationToStatus(latestEvent.classification)
+      const newStatus = allEvents.length > 0
+        ? replayEventsToStatus(allEvents)
         : targetApp.currentStatus;
 
       // Update target application status
@@ -603,7 +567,7 @@ export const jobTrackingRouter = t.router({
           userId,
           company: company.trim(),
           position: position.trim(),
-          currentStatus: mapClassificationToStatus(event.classification),
+          currentStatus: replayEventsToStatus([event]),
           source: "email",
         })
         .returning();
@@ -620,11 +584,7 @@ export const jobTrackingRouter = t.router({
       });
 
       if (remainingEvents.length > 0) {
-        const latestEvent = remainingEvents.sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        )[0];
-
-        const newSourceStatus = mapClassificationToStatus(latestEvent.classification);
+        const newSourceStatus = replayEventsToStatus(remainingEvents);
         await db
           .update(jobApplications)
           .set({
