@@ -1,17 +1,24 @@
-import { ChevronLeft, Pencil, Check } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { StatusBadge } from "@/components/status-badge";
-import { STATUS_OPTIONS, STATUS_STYLES, STATUS_STYLES_ACTIVE } from "@/constants/applications";
+import { StatusBadge, statusConfig } from "@/components/status-badge";
+import { STATUS_OPTIONS } from "@/constants/applications";
 
 interface ApplicationHeaderProps {
   company: string;
   position: string;
   jobId: string | null;
   currentStatus: string;
-  editingStatus: boolean;
   isPending: boolean;
   onBack: () => void;
-  onToggleStatus: () => void;
   onStatusSelect: (status: string) => void;
 }
 
@@ -20,10 +27,8 @@ export function ApplicationHeader({
   position,
   jobId,
   currentStatus,
-  editingStatus,
   isPending,
   onBack,
-  onToggleStatus,
   onStatusSelect,
 }: ApplicationHeaderProps) {
   return (
@@ -41,49 +46,40 @@ export function ApplicationHeader({
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           {company}
         </h1>
-        <button
-          type="button"
-          onClick={onToggleStatus}
-          className="flex items-center gap-1.5 group cursor-pointer"
-          aria-label="Edit status"
+
+        <Select
+          value={currentStatus}
+          disabled={isPending}
+          onValueChange={onStatusSelect}
         >
-          <StatusBadge status={currentStatus} />
-          <Pencil className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
+          <SelectTrigger className="border-0 shadow-none p-0 h-auto bg-transparent focus:ring-0 focus-visible:ring-0 gap-1.5 [&>svg]:hidden">
+            <SelectValue>
+              <StatusBadge status={currentStatus} />
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectGroup>
+              <SelectLabel>Override status</SelectLabel>
+              {STATUS_OPTIONS.map((s) => {
+                const config = statusConfig[s.value];
+                return (
+                  <SelectItem key={s.value} value={s.value}>
+                    <span className="flex items-center gap-2">
+                      <span className={cn("h-2 w-2 rounded-full shrink-0", config?.dotClass ?? "bg-muted-foreground")} />
+                      {s.label}
+                    </span>
+                  </SelectItem>
+                );
+              })}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       <p className="text-base text-muted-foreground">
         {position}
         {jobId && <span className="ml-2 text-muted-foreground/60">· {jobId}</span>}
       </p>
-
-      {editingStatus && (
-        <div className="flex flex-col gap-2 pt-1">
-          <span className="text-xs text-muted-foreground uppercase tracking-wider">
-            Override status
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map((s) => {
-              const isActive = currentStatus === s.value;
-              return (
-                <button
-                  key={s.value}
-                  type="button"
-                  onClick={() => onStatusSelect(s.value)}
-                  disabled={isPending}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
-                    isActive ? STATUS_STYLES_ACTIVE[s.value] : STATUS_STYLES[s.value]
-                  )}
-                >
-                  {isActive && <Check className="h-3 w-3" />}
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

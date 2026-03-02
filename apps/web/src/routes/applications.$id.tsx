@@ -32,8 +32,6 @@ function ApplicationDetailPage() {
     application,
     isLoading,
     state,
-    editingStatus,
-    setEditingStatus,
     updateEventClassification,
   } = useApplication(id);
 
@@ -65,7 +63,6 @@ function ApplicationDetailPage() {
   };
 
   const handleStatusSelect = (newStatus: string) => {
-    setEditingStatus(false);
     if (application) {
       mutations.updateApplication({
         id: application.id,
@@ -126,10 +123,8 @@ function ApplicationDetailPage() {
           position={application.position}
           jobId={application.jobId}
           currentStatus={state.currentStatus}
-          editingStatus={editingStatus}
           isPending={mutations.updateApplicationPending}
           onBack={() => navigate({ to: "/" })}
-          onToggleStatus={() => setEditingStatus(!editingStatus)}
           onStatusSelect={handleStatusSelect}
         />
 

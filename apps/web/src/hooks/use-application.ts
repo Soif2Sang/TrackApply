@@ -12,7 +12,7 @@ export function useApplication(applicationId: string) {
     currentStatus: "applied",
     eventClassificationDrafts: {},
   });
-  const [editingStatus, setEditingStatus] = useState(false);
+
 
   const { data: application, isLoading } = useQuery(
     trpc.jobTracking.getApplicationById.queryOptions({ id: applicationId })
@@ -32,6 +32,7 @@ export function useApplication(applicationId: string) {
     });
   }, [application]);
 
+
   const updateEventClassification = (eventId: string, classification: string) => {
     setState((prev) => ({
       ...prev,
@@ -46,8 +47,6 @@ export function useApplication(applicationId: string) {
     application,
     isLoading,
     state,
-    editingStatus,
-    setEditingStatus,
     updateEventClassification,
   };
 }

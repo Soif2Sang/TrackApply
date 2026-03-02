@@ -1,5 +1,14 @@
-import { Mail, Clock, ArrowUpRight, ExternalLink, Check, GitBranch } from "lucide-react";
+import { Mail, Clock, ArrowUpRight, ExternalLink, GitBranch } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import {
   getGmailUrl,
@@ -7,11 +16,8 @@ import {
   formatDateTime,
   extractName,
 } from "@/lib/date-utils";
-import {
-  EVENT_CLASSIFICATION_OPTIONS,
-  STATUS_STYLES,
-  STATUS_STYLES_ACTIVE,
-} from "@/constants/applications";
+import { EVENT_CLASSIFICATION_OPTIONS } from "@/constants/applications";
+import { StatusBadge, statusConfig } from "@/components/status-badge";
 
 interface Event {
   id: string;
@@ -48,15 +54,6 @@ const RING_COLOR: Record<string, string> = {
   technical:    "border-orange-400/40",
   offer:        "border-green-400/40",
   rejected:     "border-red-400/40",
-};
-
-const CLASSIFICATION_LABEL: Record<string, string> = {
-  acknowledged: "Acknowledged",
-  screening:    "Screening",
-  interview:    "Interview",
-  technical:    "Technical",
-  offer:        "Offer",
-  rejected:     "Rejected",
 };
 
 export function ApplicationTimeline({
@@ -135,37 +132,38 @@ export function ApplicationTimeline({
                     </div>
                   </div>
 
-                  {/* Classification selector + action buttons */}
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    {/* Classification buttons — same style as header status buttons */}
-                    <div className="flex flex-wrap gap-1.5">
-                      {EVENT_CLASSIFICATION_OPTIONS.map((classification) => {
-                        const isActive = currentClassification === classification;
-                        return (
-                          <button
-                            key={classification}
-                            type="button"
-                            onClick={() => {
-                              onClassificationChange(event.id, classification);
-                              setTimeout(
-                                () => onSaveClassification(event.id, classification),
-                                0
-                              );
-                            }}
-                            disabled={isSaving}
-                            className={cn(
-                              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-50",
-                              isActive
-                                ? STATUS_STYLES_ACTIVE[classification]
-                                : STATUS_STYLES[classification]
-                            )}
-                          >
-                            {isActive && <Check className="h-3 w-3" />}
-                            {CLASSIFICATION_LABEL[classification]}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  {/* Right side: classification select + diverge */}
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={currentClassification}
+                      disabled={isSaving}
+                      onValueChange={(value) => {
+                        onClassificationChange(event.id, value);
+                        setTimeout(() => onSaveClassification(event.id, value), 0);
+                      }}
+                    >
+                      <SelectTrigger className="border-0 shadow-none p-0 h-auto bg-transparent focus:ring-0 focus-visible:ring-0 gap-1.5 [&>svg]:hidden">
+                        <SelectValue>
+                          <StatusBadge status={currentClassification} />
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent align="end">
+                        <SelectGroup>
+                          <SelectLabel>Classification</SelectLabel>
+                          {EVENT_CLASSIFICATION_OPTIONS.map((classification) => {
+                            const config = statusConfig[classification];
+                            return (
+                              <SelectItem key={classification} value={classification}>
+                                <span className="flex items-center gap-2">
+                                  <span className={cn("h-2 w-2 rounded-full shrink-0", config?.dotClass ?? "bg-muted-foreground")} />
+                                  {config?.label ?? classification}
+                                </span>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
 
                     {/* Diverge button */}
                     {onDivergeEvent && (
