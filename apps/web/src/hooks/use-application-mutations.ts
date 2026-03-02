@@ -90,6 +90,9 @@ export function useApplicationMutations(
         queryKey: trpc.jobTracking.getApplications.queryKey(),
       });
       await queryClient.invalidateQueries({
+        queryKey: trpc.jobTracking.getApplicationById.queryKey({ id: applicationId }),
+      });
+      await queryClient.invalidateQueries({
         queryKey: trpc.jobTracking.getApplicationById.queryKey({ id: data.newApplicationId }),
       });
       toast.success("Event diverged to new application", {
