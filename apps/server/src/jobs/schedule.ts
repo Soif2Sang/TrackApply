@@ -84,6 +84,9 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
       })
       .where(eq(user.id, userId));
 
+    // Collect all message IDs across all pages first
+    const allMessageIds: string[] = [];
+
     do {
       const messages = await listMessages(userId, query, {
         pageToken: nextPageToken,
@@ -96,26 +99,34 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
 
       for (const msg of messageList) {
         if (!msg.id) continue;
+        allMessageIds.push(msg.id);
 
-        await boss.send(JOB_NAMES.PROCESS_EMAIL, {
-          userId,
-          emailId: msg.id,
-        });
-        queued++;
-
-        if (maxTotal > 0 && queued >= maxTotal) {
+        if (maxTotal > 0 && allMessageIds.length >= maxTotal) {
           console.log(`⚠️ Reached EMAIL_SYNC_MAX_TOTAL=${maxTotal}, stopping pagination`);
           nextPageToken = undefined;
           break;
         }
       }
 
-      if (maxTotal > 0 && queued >= maxTotal) {
+      if (maxTotal > 0 && allMessageIds.length >= maxTotal) {
         break;
       }
 
       nextPageToken = messages.data.nextPageToken || undefined;
     } while (nextPageToken);
+
+    // Gmail IDs are monotonically increasing integers — sort ascending to process oldest first
+    allMessageIds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
+    console.log(`📬 Enqueuing ${allMessageIds.length} messages oldest-first across ${page} page(s)`);
+
+    for (const emailId of allMessageIds) {
+      await boss.send(JOB_NAMES.PROCESS_EMAIL, {
+        userId,
+        emailId,
+      });
+      queued++;
+    }
 
     // Update sync timestamps and total count
     const now = new Date();
