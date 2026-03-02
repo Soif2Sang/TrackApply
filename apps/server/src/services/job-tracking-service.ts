@@ -1,4 +1,5 @@
 import { db } from "../db";
+import type { Logger } from "../lib/logger";
 import {
   jobApplications,
   applicationEvents,
@@ -211,14 +212,17 @@ async function isEmailIgnored(userId: string, emailId: string): Promise<boolean>
 // ---------------------------------------------------------------------------
 export async function processRecruitmentEmail(
   userId: string,
-  input: ProcessEmailInput
+  input: ProcessEmailInput,
+  logger: Logger
 ): Promise<ProcessEmailResult> {
+  const log = logger.scope("job-tracking");
+
   try {
-    console.log(`[job-tracking] start emailId=${input.emailId} userId=${userId} company="${input.company}" position="${input.position}"`);
+    log.info(`start emailId=${input.emailId} userId=${userId} company="${input.company}" position="${input.position}"`);
 
     // 1. Ignore-list check.
     if (await isEmailIgnored(userId, input.emailId)) {
-      console.log(`[job-tracking] skip reason=ignored emailId=${input.emailId}`);
+      log.info(`skip reason=ignored emailId=${input.emailId}`);
       return {
         success: true,
         applicationId: "",
@@ -231,7 +235,7 @@ export async function processRecruitmentEmail(
 
     // 2. Deduplication check — must happen before any insert.
     if (await eventExists(input.emailId)) {
-      console.log(`[job-tracking] skip reason=duplicate emailId=${input.emailId}`);
+      log.info(`skip reason=duplicate emailId=${input.emailId}`);
       const existingEvent = await db.query.applicationEvents.findFirst({
         where: eq(applicationEvents.emailId, input.emailId),
         with: { application: true },
@@ -255,12 +259,12 @@ export async function processRecruitmentEmail(
       input.jobId
     );
 
-    console.log(`[job-tracking] match applicationId=${application ? application.id : "none"}`);
+    log.info(`match applicationId=${application ? application.id : "none"}`);
 
     const isNewApplication = !application;
 
     if (!application) {
-      console.log(`[job-tracking] create-application company="${input.company}" position="${input.position}"`);
+      log.info(`create-application company="${input.company}" position="${input.position}"`);
       const [newApp] = await db
         .insert(jobApplications)
         .values({
@@ -274,9 +278,9 @@ export async function processRecruitmentEmail(
         .returning();
 
       application = newApp;
-      console.log(`[job-tracking] created applicationId=${application.id}`);
+      log.info(`created applicationId=${application.id}`);
     } else {
-      console.log(`[job-tracking] reuse applicationId=${application.id}`);
+      log.info(`reuse applicationId=${application.id}`);
     }
 
     // 4. Insert the new event.
@@ -307,7 +311,7 @@ export async function processRecruitmentEmail(
       .set({ currentStatus: recalculatedStatus, updatedAt: new Date() })
       .where(eq(jobApplications.id, application.id));
 
-    console.log(`[job-tracking] done applicationId=${application.id} status=${recalculatedStatus} isNew=${isNewApplication}`);
+    log.info(`done applicationId=${application.id} status=${recalculatedStatus} isNew=${isNewApplication}`);
 
     return {
       success: true,
@@ -319,7 +323,7 @@ export async function processRecruitmentEmail(
         : `Updated existing application for ${input.position} at ${input.company}`,
     };
   } catch (error) {
-    console.error(`[job-tracking] error emailId=${input.emailId}`, error);
+    log.error(`error emailId=${input.emailId}`, error);
     throw error;
   }
 }

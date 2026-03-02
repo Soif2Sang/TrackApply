@@ -1,5 +1,6 @@
 import type { Job } from "pg-boss";
 import { modifyLabels } from "../../services/gmail-service";
+import { Logger } from "../../lib/logger";
 
 export interface LabelEmailPayload {
   userId: string;
@@ -11,9 +12,9 @@ export async function labelEmail(jobs: Job<LabelEmailPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, threadId, labelIds } = job.data;
-  const log = (msg: string) => console.log(`[label-email:${job.id}] ${msg}`);
+  const logger = new Logger("label-email", job.id);
 
-  log(`start threadId=${threadId} labels=[${labelIds.join(",")}] userId=${userId}`);
+  logger.info(`start threadId=${threadId} labels=[${labelIds.join(",")}] userId=${userId}`);
 
   try {
     const modifyStart = Date.now();
@@ -21,7 +22,8 @@ export async function labelEmail(jobs: Job<LabelEmailPayload>[]) {
     const modifyMs = Date.now() - modifyStart;
 
     const totalMs = Date.now() - startTime;
-    log(`done threadId=${threadId} perf=gmail.modify:${modifyMs}ms,total:${totalMs}ms`);
+    logger.info(`done threadId=${threadId} perf=gmail.modify:${modifyMs}ms,total:${totalMs}ms`);
+    logger.flush();
 
     return {
       success: true,
@@ -30,7 +32,8 @@ export async function labelEmail(jobs: Job<LabelEmailPayload>[]) {
     };
   } catch (error) {
     const totalMs = Date.now() - startTime;
-    console.error(`[label-email:${job.id}] error threadId=${threadId} totalMs=${totalMs}ms`, error);
+    logger.error(`error threadId=${threadId} totalMs=${totalMs}ms`, error);
+    logger.flush();
     throw error;
   }
 }

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { eventClassificationEnum } from "../db/schema/job-applications";
+import type { Logger } from "../lib/logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
@@ -114,7 +115,9 @@ const VALID_CLASSIFIER_OUTPUTS = new Set([
   "OTHER",
 ]);
 
-export async function classifyEmail(input: EmailInput): Promise<ClassificationResult> {
+export async function classifyEmail(input: EmailInput, logger: Logger): Promise<ClassificationResult> {
+  const log = logger.scope("classify");
+
   const startTime = Date.now();
   try {
     const model = genAI.getGenerativeModel({
@@ -162,8 +165,8 @@ export async function classifyEmail(input: EmailInput): Promise<ClassificationRe
     }
 
     const totalMs = Date.now() - startTime;
-    console.log(
-      `[classify-email] done classification=${parsed.classification} confidence=${parsed.confidence} perf=request:${requestMs}ms,parse:${parseMs}ms,total:${totalMs}ms promptChars=${prompt.length}`
+    log.info(
+      `done classification=${parsed.classification} confidence=${parsed.confidence} perf=request:${requestMs}ms,parse:${parseMs}ms,total:${totalMs}ms promptChars=${prompt.length}`
     );
 
     const classifierOutput = parsed.classification as string;
@@ -182,7 +185,7 @@ export async function classifyEmail(input: EmailInput): Promise<ClassificationRe
   } catch (error) {
     const totalMs = Date.now() - startTime;
     const status = (error as any)?.status || (error as any)?.code || (error as any)?.response?.status;
-    console.error(`[classify-email] error status=${status ?? "unknown"} totalMs=${totalMs}ms`, error);
+    log.error(`error status=${status ?? "unknown"} totalMs=${totalMs}ms`, error);
     throw error;
   }
 }

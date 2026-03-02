@@ -3,6 +3,7 @@ import { classifyEmail } from "../../services/email-classifier";
 import { processRecruitmentEmail } from "../../services/job-tracking-service";
 import { getLabelForClassification, sendJob, JOB_NAMES } from "../pgboss";
 import type { EventClassification } from "../../services/email-classifier";
+import { Logger } from "../../lib/logger";
 
 export interface AnalyzeContentPayload {
   userId: string;
@@ -23,9 +24,9 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, emailData } = job.data;
-  const log = (msg: string) => console.log(`[analyze-content:${job.id}] ${msg}`);
+  const logger = new Logger("analyze-content", job.id);
 
-  log(`start emailId=${emailData.emailId} subject="${emailData.subject}" userId=${userId}`);
+  logger.info(`start emailId=${emailData.emailId} subject="${emailData.subject}" userId=${userId}`);
 
   try {
     const classifyStart = Date.now();
@@ -34,12 +35,13 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
       body: emailData.body,
       from: emailData.from,
       snippet: emailData.snippet,
-    });
+    }, logger);
     const classifyMs = Date.now() - classifyStart;
 
     if (classification.classification === "OTHER") {
       const totalMs = Date.now() - startTime;
-      log(`skip reason=not_recruitment classification=OTHER perf=classify:${classifyMs}ms,total:${totalMs}ms`);
+      logger.info(`skip reason=not_recruitment classification=OTHER perf=classify:${classifyMs}ms,total:${totalMs}ms`);
+      logger.flush();
       return {
         skipped: true,
         reason: "not_recruitment",
@@ -63,7 +65,7 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
       company: classification.company,
       jobId: classification.jobId,
       confidence: classification.confidence,
-    });
+    }, logger);
     const processMs = Date.now() - processStart;
 
     let enqueueLabelMs = 0;
@@ -88,12 +90,13 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
     }
 
     const totalMs = Date.now() - startTime;
-    log(
+    logger.info(
       `done classification=${classification.classification} confidence=${classification.confidence}` +
       ` company="${classification.company}" position="${classification.position}"` +
-      ` skipped=${result.skipped}` +
+      ` skipped=${result.skipped ?? false}` +
       ` perf=classify:${classifyMs}ms,process:${processMs}ms,enqueueLabel:${enqueueLabelMs}ms,total:${totalMs}ms`
     );
+    logger.flush();
 
     return {
       success: true,
@@ -104,7 +107,8 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
     };
   } catch (error) {
     const totalMs = Date.now() - startTime;
-    console.error(`[analyze-content:${job.id}] error emailId=${emailData.emailId} totalMs=${totalMs}ms`, error);
+    logger.error(`error emailId=${emailData.emailId} totalMs=${totalMs}ms`, error);
+    logger.flush();
     throw error;
   }
 }

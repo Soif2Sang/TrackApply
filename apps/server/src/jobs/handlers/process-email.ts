@@ -1,6 +1,7 @@
 import type { Job } from "pg-boss";
 import { getMessage, extractEmailData } from "../../services/gmail-service";
 import { sendJob, JOB_NAMES } from "../pgboss";
+import { Logger } from "../../lib/logger";
 
 export interface ProcessEmailPayload {
   userId: string;
@@ -12,11 +13,11 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, emailId } = job.data;
-  const log = (msg: string) => console.log(`[process-email:${job.id}] ${msg}`);
+  const logger = new Logger("process-email", job.id);
   const analyzeRetryLimit = parseInt(process.env.ANALYZE_RETRY_LIMIT || "5", 10);
   const analyzeRetryDelay = parseInt(process.env.ANALYZE_RETRY_DELAY_SECONDS || "30", 10);
 
-  log(`start emailId=${emailId} userId=${userId}`);
+  logger.info(`start emailId=${emailId} userId=${userId}`);
 
   try {
     const getMessageStart = Date.now();
@@ -40,7 +41,8 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
     const enqueueMs = Date.now() - enqueueStart;
 
     const totalMs = Date.now() - startTime;
-    log(`done subject="${emailData.subject}" from="${emailData.from}" perf=gmail.get:${getMessageMs}ms,extract:${extractMs}ms,enqueue:${enqueueMs}ms,total:${totalMs}ms`);
+    logger.info(`done subject="${emailData.subject}" from="${emailData.from}" perf=gmail.get:${getMessageMs}ms,extract:${extractMs}ms,enqueue:${enqueueMs}ms,total:${totalMs}ms`);
+    logger.flush();
 
     return {
       success: true,
@@ -49,7 +51,8 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
     };
   } catch (error) {
     const totalMs = Date.now() - startTime;
-    console.error(`[process-email:${job.id}] error emailId=${emailId} totalMs=${totalMs}`, error);
+    logger.error(`error emailId=${emailId} totalMs=${totalMs}ms`, error);
+    logger.flush();
     throw error;
   }
 }
