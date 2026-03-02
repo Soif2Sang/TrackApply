@@ -1,5 +1,6 @@
-import { Briefcase, Github, LogOut } from "lucide-react";
+import { Github, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TrackApplyIcon } from "@/components/track-apply-icon";
 
 interface DashboardHeaderProps {
   onSignOut: () => void;
@@ -11,7 +12,7 @@ export function DashboardHeader({ onSignOut }: DashboardHeaderProps) {
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm">
-            <Briefcase className="h-5 w-5" />
+            <TrackApplyIcon size={20} />
           </div>
           <span className="font-semibold text-lg tracking-tight">TrackApply</span>
           <span className="flex items-center gap-1.5 text-accent text-xs font-mono">

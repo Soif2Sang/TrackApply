@@ -1,5 +1,4 @@
 import { 
-  Briefcase, 
   Zap, 
   Loader2, 
   Github, 
@@ -12,6 +11,7 @@ import {
   Inbox
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TrackApplyIcon } from "@/components/track-apply-icon";
 
 interface SignInPageProps {
   onSignIn: () => void;
@@ -29,7 +29,7 @@ export function SignInPage({ onSignIn, isLoading }: SignInPageProps) {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground shadow-sm">
-              <Briefcase className="h-5 w-5" />
+              <TrackApplyIcon size={20} />
             </div>
             <span className="font-semibold text-lg tracking-tight">TrackApply</span>
           </div>
@@ -324,7 +324,7 @@ export function SignInPage({ onSignIn, isLoading }: SignInPageProps) {
       <footer className="w-full border-t border-border/40 py-8 px-6 bg-background relative z-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
+            <TrackApplyIcon size={16} />
             <span className="font-semibold text-foreground">TrackApply</span>
             <span>&copy; {new Date().getFullYear()}</span>
           </div>
