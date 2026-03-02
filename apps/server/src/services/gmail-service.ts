@@ -135,9 +135,9 @@ export async function listConnectedUserIds(): Promise<string[]> {
 
 // Label IDs mapping (to be configured based on user's Gmail labels)
 export const LABEL_IDS = {
-  RECRUITMENT_ACK: process.env.LABEL_RECRUITMENT_ACK || "Label_RECRUITMENT_ACK",
-  NEXT_STEP: process.env.LABEL_NEXT_STEP || "Label_NEXT_STEP",
-  DISAPPROVAL: process.env.LABEL_DISAPPROVAL || "Label_DISAPPROVAL",
+  ACKNOWLEDGED: process.env.LABEL_RECRUITMENT_ACK || "Label_RECRUITMENT_ACK",
+  NEXT_STEP:    process.env.LABEL_NEXT_STEP || "Label_NEXT_STEP",
+  REJECTED:     process.env.LABEL_DISAPPROVAL || "Label_DISAPPROVAL",
   LOW_CONFIDENCE: process.env.LABEL_LOW_CONFIDENCE || "Label_LOW_CONFIDENCE",
 };
 
@@ -191,23 +191,26 @@ export function getLabelForClassification(
   confidence?: string
 ): string[] {
   const labels: string[] = [];
-  
+
   switch (classification) {
-    case "RECRUITMENT_ACK":
-      labels.push(LABEL_IDS.RECRUITMENT_ACK);
+    case "acknowledged":
+      labels.push(LABEL_IDS.ACKNOWLEDGED);
       break;
-    case "NEXT_STEP":
+    case "screening":
+    case "interview":
+    case "technical":
+    case "offer":
       labels.push(LABEL_IDS.NEXT_STEP);
       break;
-    case "DISAPPROVAL":
-      labels.push(LABEL_IDS.DISAPPROVAL);
+    case "rejected":
+      labels.push(LABEL_IDS.REJECTED);
       break;
   }
-  
+
   if (confidence === "low") {
     labels.push(LABEL_IDS.LOW_CONFIDENCE);
   }
-  
+
   return labels;
 }
 

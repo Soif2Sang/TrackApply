@@ -8,9 +8,9 @@ import {
   extractName,
 } from "@/lib/date-utils";
 import {
-  CLASSIFICATION_OPTIONS,
-  CLASSIFICATION_STYLES,
-  CLASSIFICATION_STYLES_ACTIVE,
+  EVENT_CLASSIFICATION_OPTIONS,
+  STATUS_STYLES,
+  STATUS_STYLES_ACTIVE,
 } from "@/constants/applications";
 
 interface Event {
@@ -33,15 +33,30 @@ interface ApplicationTimelineProps {
 }
 
 const DOT_COLOR: Record<string, string> = {
-  RECRUITMENT_ACK: "bg-blue-400",
-  NEXT_STEP: "bg-emerald-400",
-  DISAPPROVAL: "bg-red-400",
+  acknowledged: "bg-blue-400",
+  screening:    "bg-emerald-400",
+  interview:    "bg-purple-400",
+  technical:    "bg-orange-400",
+  offer:        "bg-green-400",
+  rejected:     "bg-red-400",
 };
 
 const RING_COLOR: Record<string, string> = {
-  RECRUITMENT_ACK: "border-blue-400/40",
-  NEXT_STEP: "border-emerald-400/40",
-  DISAPPROVAL: "border-red-400/40",
+  acknowledged: "border-blue-400/40",
+  screening:    "border-emerald-400/40",
+  interview:    "border-purple-400/40",
+  technical:    "border-orange-400/40",
+  offer:        "border-green-400/40",
+  rejected:     "border-red-400/40",
+};
+
+const CLASSIFICATION_LABEL: Record<string, string> = {
+  acknowledged: "Acknowledged",
+  screening:    "Screening",
+  interview:    "Interview",
+  technical:    "Technical",
+  offer:        "Offer",
+  rejected:     "Rejected",
 };
 
 export function ApplicationTimeline({
@@ -120,10 +135,11 @@ export function ApplicationTimeline({
                     </div>
                   </div>
 
-                  {/* Classification selector */}
-                  <div className="flex items-center gap-2">
+                  {/* Classification selector + action buttons */}
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    {/* Classification buttons — same style as header status buttons */}
                     <div className="flex flex-wrap gap-1.5">
-                      {CLASSIFICATION_OPTIONS.map((classification) => {
+                      {EVENT_CLASSIFICATION_OPTIONS.map((classification) => {
                         const isActive = currentClassification === classification;
                         return (
                           <button
@@ -138,40 +154,40 @@ export function ApplicationTimeline({
                             }}
                             disabled={isSaving}
                             className={cn(
-                              "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-mono font-medium transition-all cursor-pointer",
+                              "inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-50",
                               isActive
-                                ? CLASSIFICATION_STYLES_ACTIVE[classification]
-                                : CLASSIFICATION_STYLES[classification]
+                                ? STATUS_STYLES_ACTIVE[classification]
+                                : STATUS_STYLES[classification]
                             )}
                           >
-                            {isActive ? (
-                              <Check className="h-2.5 w-2.5" />
-                            ) : null}
-                            {classification.replace("_", " ")}
+                            {isActive && <Check className="h-3 w-3" />}
+                            {CLASSIFICATION_LABEL[classification]}
                           </button>
                         );
                       })}
-                      {onDivergeEvent && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => onDivergeEvent(event.id)}
-                              disabled={isDiverging || isSaving}
-                              className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-2 py-1 text-[10px] font-mono font-medium transition-all cursor-pointer disabled:opacity-50"
-                            >
-                              <GitBranch className="h-2.5 w-2.5" />
-                              Diverge
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-64 text-center leading-relaxed">
-                            The pipeline sometimes groups emails from different
-                            jobs under one application. Diverge moves this email
-                            into a brand-new, separate application.
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
                     </div>
+
+                    {/* Diverge button */}
+                    {onDivergeEvent && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => onDivergeEvent(event.id)}
+                            disabled={isDiverging || isSaving}
+                            className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-3 py-1.5 text-xs font-medium transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <GitBranch className="h-3 w-3" />
+                            Diverge
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-64 text-center leading-relaxed">
+                          The pipeline sometimes groups emails from different
+                          jobs under one application. Diverge moves this email
+                          into a brand-new, separate application.
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
 

@@ -2,6 +2,7 @@ import type { Job } from "pg-boss";
 import { classifyEmail } from "../../services/email-classifier";
 import { processRecruitmentEmail } from "../../services/job-tracking-service";
 import { getLabelForClassification, sendJob, JOB_NAMES } from "../pgboss";
+import type { EventClassification } from "../../services/email-classifier";
 
 export interface AnalyzeContentPayload {
   userId: string;
@@ -38,7 +39,7 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
     console.log(`[${job.id}] Classification: ${classification.classification} (${classification.confidence})`);
     console.log(`[${job.id}] PERF analyze-content: classify=${classifyMs}ms`);
 
-    if (classification.classification === "OTHER") {
+    if (classification.classification === "OTHER" ) {
       const duration = Date.now() - startTime;
       console.log(`[${job.id}] PERF analyze-content: total=${duration}ms (skipped)`);
       console.log(`[${job.id}] Skipping non-recruitment email`);
@@ -60,7 +61,7 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
       date: emailData.date,
       body: emailData.body,
       snippet: emailData.snippet,
-      classification: classification.classification,
+      classification: classification.classification as EventClassification,
       position: classification.position,
       company: classification.company,
       jobId: classification.jobId,

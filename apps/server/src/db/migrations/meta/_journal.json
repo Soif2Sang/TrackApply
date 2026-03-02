@@ -78,6 +78,13 @@
       "when": 1771342739463,
       "tag": "0010_elite_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1772458160222,
+      "tag": "0011_same_risque",
+      "breakpoints": true
     }
   ]
 }

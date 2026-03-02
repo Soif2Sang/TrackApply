@@ -56,23 +56,15 @@ export const STATUS_STYLES_ACTIVE: Record<string, string> = {
   withdrawn: "bg-muted border-muted-foreground/60 text-muted-foreground",
 };
 
-// Classification options for events
-export const CLASSIFICATION_OPTIONS = [
-  "RECRUITMENT_ACK",
-  "NEXT_STEP",
-  "DISAPPROVAL",
+// The subset of statuses that an email event can carry.
+// "applied" and "withdrawn" are user-initiated and never come from an email.
+export const EVENT_CLASSIFICATION_OPTIONS = [
+  "acknowledged",
+  "screening",
+  "interview",
+  "technical",
+  "offer",
+  "rejected",
 ] as const;
 
-export type ClassificationType = (typeof CLASSIFICATION_OPTIONS)[number];
-
-export const CLASSIFICATION_STYLES: Record<string, string> = {
-  RECRUITMENT_ACK: "border-blue-500/30 text-blue-400 hover:bg-blue-500/10",
-  NEXT_STEP: "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10",
-  DISAPPROVAL: "border-red-500/30 text-red-400 hover:bg-red-500/10",
-};
-
-export const CLASSIFICATION_STYLES_ACTIVE: Record<string, string> = {
-  RECRUITMENT_ACK: "bg-blue-500/20 border-blue-500/60 text-blue-400",
-  NEXT_STEP: "bg-emerald-500/20 border-emerald-500/60 text-emerald-400",
-  DISAPPROVAL: "bg-red-500/20 border-red-500/60 text-red-400",
-};
+export type EventClassification = (typeof EVENT_CLASSIFICATION_OPTIONS)[number];

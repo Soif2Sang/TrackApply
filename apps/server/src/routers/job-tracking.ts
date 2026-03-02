@@ -6,8 +6,7 @@ import {
   applicationNotes,
   ignoredEmails,
   applicationStatusEnum,
-  classificationEnum,
-  eventTypeEnum,
+  eventClassificationEnum,
 } from "../db/schema/job-applications";
 import { user } from "../db/schema/auth";
 import { eq, and, sql } from "drizzle-orm";
@@ -15,7 +14,7 @@ import { TRPCError } from "@trpc/server";
 import { t } from "../lib/trpc";
 import { triggerManualSync } from "../jobs/schedule";
 import { PG_BOSS_SCHEMA } from "../jobs/pgboss";
-import { replayEventsToStatus, classificationToEventType } from "../services/job-tracking-service";
+import { replayEventsToStatus } from "../services/job-tracking-service";
 
 // Require authentication middleware
 const requireAuth = t.procedure.use(({ ctx, next }) => {
@@ -243,7 +242,7 @@ export const jobTrackingRouter = t.router({
     .input(z.object({
       applicationId: z.string().uuid(),
       eventId: z.string().uuid(),
-      classification: z.enum(classificationEnum),
+      classification: z.enum(eventClassificationEnum),
     }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session!.user.id;
@@ -280,7 +279,6 @@ export const jobTrackingRouter = t.router({
         .update(applicationEvents)
         .set({
           classification: input.classification,
-          eventType: classificationToEventType(input.classification),
         })
         .where(eq(applicationEvents.id, input.eventId));
 
@@ -498,8 +496,7 @@ export const jobTrackingRouter = t.router({
       const eventDate = input.appliedDate || new Date().toISOString();
       await db.insert(applicationEvents).values({
         applicationId: newApplication.id,
-        eventType: "application_sent",
-        classification: "RECRUITMENT_ACK",
+        classification: "acknowledged",
         emailId: `manual-${Date.now()}`,
         subject: `Application sent for ${input.position} at ${input.company}`,
         from: userId,

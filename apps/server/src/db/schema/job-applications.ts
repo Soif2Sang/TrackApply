@@ -1,29 +1,27 @@
-import { pgTable, text, timestamp, uuid, jsonb, boolean, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { user } from "./auth";
 
 export const applicationStatusEnum = [
-  "applied",           // Initial application sent
-  "acknowledged",      // RECRUITMENT_ACK received
-  "screening",         // NEXT_STEP - screening/phone call
-  "interview",         // NEXT_STEP - interview scheduled
-  "technical",         // NEXT_STEP - coding challenge/technical assessment
-  "offer",             // NEXT_STEP - offer received
-  "rejected",          // DISAPPROVAL
-  "withdrawn",         // User withdrew application
+  "applied",      // Initial application sent
+  "acknowledged", // Acknowledgment email received
+  "screening",    // Phone screen / recruiter call
+  "interview",    // Interview scheduled
+  "technical",    // Coding challenge / technical assessment
+  "offer",        // Offer received
+  "rejected",     // Rejected
+  "withdrawn",    // User withdrew application
 ] as const;
 
-export const eventTypeEnum = [
-  "application_sent",     // User initiated
-  "recruitment_ack",      // RECRUITMENT_ACK
-  "next_step",            // NEXT_STEP
-  "disapproval",          // DISAPPROVAL
-] as const;
-
-export const classificationEnum = [
-  "RECRUITMENT_ACK",
-  "NEXT_STEP", 
-  "DISAPPROVAL",
+// The subset of statuses that an email event can carry.
+// "applied" and "withdrawn" are user-initiated and can never come from an email.
+export const eventClassificationEnum = [
+  "acknowledged",
+  "screening",
+  "interview",
+  "technical",
+  "offer",
+  "rejected",
 ] as const;
 
 // Main job applications table
@@ -34,9 +32,9 @@ export const jobApplications = pgTable("job_applications", {
     .references(() => user.id, { onDelete: "cascade" }),
   company: text("company").notNull(),
   position: text("position").notNull(),
-  jobId: text("job_id"), // Optional - not all emails include this
+  jobId: text("job_id"),
   currentStatus: text("current_status").notNull().$type<typeof applicationStatusEnum[number]>(),
-  source: text("source").default("email"), // email, manual, etc.
+  source: text("source").default("email"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -47,10 +45,9 @@ export const applicationEvents = pgTable("application_events", {
   applicationId: uuid("application_id")
     .notNull()
     .references(() => jobApplications.id, { onDelete: "cascade" }),
-  eventType: text("event_type").notNull().$type<typeof eventTypeEnum[number]>(),
-  classification: text("classification").notNull().$type<typeof classificationEnum[number]>(),
-  
-  // Email metadata from n8n
+  classification: text("classification").notNull().$type<typeof eventClassificationEnum[number]>(),
+
+  // Email metadata
   emailId: text("email_id").notNull(),
   threadId: text("thread_id"),
   messageId: text("message_id"),
@@ -58,13 +55,13 @@ export const applicationEvents = pgTable("application_events", {
   from: text("from").notNull(),
   to: text("to").notNull(),
   date: text("date").notNull(),
-  
-  // Classification results
+
+  // Classification confidence
   confidence: text("confidence"),
-  
+
   // Raw payload for debugging
   rawPayload: jsonb("raw_payload"),
-  
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -85,14 +82,13 @@ export const ignoredEmails = pgTable("ignored_emails", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  emailId: text("email_id").notNull(), // Gmail message ID, not the application_events UUID
+  emailId: text("email_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => ({
-  // Unique constraint to prevent duplicates
   uniqueEmailPerUser: uniqueIndex("ignored_emails_user_email_idx").on(table.userId, table.emailId),
 }));
 
-// Define relations
+// Relations
 export const jobApplicationsRelations = relations(jobApplications, ({ one, many }) => ({
   user: one(user, {
     fields: [jobApplications.userId],

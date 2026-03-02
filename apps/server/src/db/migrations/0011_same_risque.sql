@@ -1,0 +1,1 @@
+ALTER TABLE "application_events" DROP COLUMN "event_type";

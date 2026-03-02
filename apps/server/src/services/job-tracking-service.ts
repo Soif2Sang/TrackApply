@@ -3,8 +3,7 @@ import {
   jobApplications,
   applicationEvents,
   ignoredEmails,
-  classificationEnum,
-  eventTypeEnum,
+  eventClassificationEnum,
   applicationStatusEnum,
 } from "../db/schema/job-applications";
 import { eq, and } from "drizzle-orm";
@@ -19,7 +18,7 @@ export interface ProcessEmailInput {
   date: string;
   body: string;
   snippet?: string;
-  classification: (typeof classificationEnum)[number];
+  classification: (typeof eventClassificationEnum)[number];
   position?: string | null;
   company?: string | null;
   jobId?: string | null;
@@ -38,7 +37,6 @@ export interface ProcessEmailResult {
 
 // ---------------------------------------------------------------------------
 // Status ordering — higher index = more advanced in the hiring process.
-// A status can never move to a lower rank via replay.
 // ---------------------------------------------------------------------------
 const STATUS_RANK: Record<(typeof applicationStatusEnum)[number], number> = {
   applied:      0,
@@ -51,81 +49,26 @@ const STATUS_RANK: Record<(typeof applicationStatusEnum)[number], number> = {
   withdrawn:    7,
 };
 
-function isMoreAdvanced(
-  candidate: (typeof applicationStatusEnum)[number],
-  current: (typeof applicationStatusEnum)[number]
-): boolean {
-  // "rejected" and "withdrawn" are terminal — never overwrite them.
-  if (current === "rejected" || current === "withdrawn") return false;
-  return STATUS_RANK[candidate] > STATUS_RANK[current];
-}
-
 // ---------------------------------------------------------------------------
-// Map a single classification + current status → next status.
-// Always called as part of a chronological replay, never in isolation.
-// ---------------------------------------------------------------------------
-function classificationToNextStatus(
-  classification: (typeof classificationEnum)[number],
-  currentStatus: (typeof applicationStatusEnum)[number]
-): (typeof applicationStatusEnum)[number] {
-  switch (classification) {
-    case "RECRUITMENT_ACK":
-      // Only move to "acknowledged" if we haven't progressed further yet.
-      return isMoreAdvanced("acknowledged", currentStatus) ? "acknowledged" : currentStatus;
-
-    case "NEXT_STEP": {
-      // Advance exactly one step from the current position.
-      const progressionMap: Partial<Record<(typeof applicationStatusEnum)[number], (typeof applicationStatusEnum)[number]>> = {
-        applied:      "screening",
-        acknowledged: "screening",
-        screening:    "interview",
-        interview:    "technical",
-        technical:    "offer",
-      };
-      const next = progressionMap[currentStatus];
-      return next ?? currentStatus;
-    }
-
-    case "DISAPPROVAL":
-      return isMoreAdvanced("rejected", currentStatus) ? "rejected" : currentStatus;
-
-    default:
-      return currentStatus;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Exported helper: replay all events for an application in chronological
-// order and derive the correct current status from scratch.
-// Safe to call after any mutation (insert, update, merge, diverge).
+// Exported helper: derive the application status from all its events by
+// returning the single highest-ranked status seen across the event list.
+// No sequential replay or positional guessing — the event classification IS
+// the status, so we just take the MAX.
 // ---------------------------------------------------------------------------
 export function replayEventsToStatus(
-  events: Array<{ classification: (typeof classificationEnum)[number]; date: string }>
+  events: Array<{ classification: (typeof eventClassificationEnum)[number] }>
 ): (typeof applicationStatusEnum)[number] {
   if (events.length === 0) return "applied";
 
-  const sorted = [...events].sort(
-    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  let best: (typeof applicationStatusEnum)[number] = "applied";
 
-  let status: (typeof applicationStatusEnum)[number] = "applied";
-  for (const event of sorted) {
-    status = classificationToNextStatus(event.classification, status);
+  for (const event of events) {
+    if (STATUS_RANK[event.classification] > STATUS_RANK[best]) {
+      best = event.classification;
+    }
   }
-  return status;
-}
 
-// ---------------------------------------------------------------------------
-// Map classification → eventType (replaces the previous silent no-op).
-// ---------------------------------------------------------------------------
-export function classificationToEventType(
-  classification: (typeof classificationEnum)[number]
-): (typeof eventTypeEnum)[number] {
-  switch (classification) {
-    case "RECRUITMENT_ACK": return "recruitment_ack";
-    case "NEXT_STEP":       return "next_step";
-    case "DISAPPROVAL":     return "disapproval";
-  }
+  return best;
 }
 
 // ---------------------------------------------------------------------------
@@ -339,18 +282,17 @@ export async function processRecruitmentEmail(
 
     // 4. Insert the new event.
     await db.insert(applicationEvents).values({
-      applicationId: application.id,
-      eventType:     classificationToEventType(input.classification),
+      applicationId:  application.id,
       classification: input.classification,
-      emailId:       input.emailId,
-      threadId:      input.threadId  || null,
-      messageId:     input.messageId || null,
-      subject:       input.subject,
-      from:          input.from,
-      to:            input.to,
-      date:          input.date,
-      confidence:    input.confidence || null,
-      rawPayload:    input.rawPayload || (input as unknown as Record<string, unknown>),
+      emailId:        input.emailId,
+      threadId:       input.threadId  || null,
+      messageId:      input.messageId || null,
+      subject:        input.subject,
+      from:           input.from,
+      to:             input.to,
+      date:           input.date,
+      confidence:     input.confidence || null,
+      rawPayload:     input.rawPayload || (input as unknown as Record<string, unknown>),
     });
 
     // 5. Replay all events (including the one just inserted) to derive status.

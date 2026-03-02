@@ -85,7 +85,7 @@ function ApplicationDetailPage() {
     mutations.updateEventClassification({
       applicationId: application.id,
       eventId,
-      classification: nextClassification as "RECRUITMENT_ACK" | "NEXT_STEP" | "DISAPPROVAL",
+      classification: nextClassification as "acknowledged" | "screening" | "interview" | "technical" | "offer" | "rejected",
     });
   };
 
