@@ -214,12 +214,11 @@ export async function processRecruitmentEmail(
   input: ProcessEmailInput
 ): Promise<ProcessEmailResult> {
   try {
-    console.log(`[PROCESS-EMAIL] Processing email ${input.emailId} for user ${userId}`);
-    console.log(`[PROCESS-EMAIL] Company: ${input.company}, Position: ${input.position}`);
+    console.log(`[job-tracking] start emailId=${input.emailId} userId=${userId} company="${input.company}" position="${input.position}"`);
 
     // 1. Ignore-list check.
     if (await isEmailIgnored(userId, input.emailId)) {
-      console.log(`[PROCESS-EMAIL] Email ${input.emailId} is ignored — skipping`);
+      console.log(`[job-tracking] skip reason=ignored emailId=${input.emailId}`);
       return {
         success: true,
         applicationId: "",
@@ -232,7 +231,7 @@ export async function processRecruitmentEmail(
 
     // 2. Deduplication check — must happen before any insert.
     if (await eventExists(input.emailId)) {
-      console.log(`[PROCESS-EMAIL] Event already exists for email ${input.emailId} — skipping`);
+      console.log(`[job-tracking] skip reason=duplicate emailId=${input.emailId}`);
       const existingEvent = await db.query.applicationEvents.findFirst({
         where: eq(applicationEvents.emailId, input.emailId),
         with: { application: true },
@@ -256,12 +255,12 @@ export async function processRecruitmentEmail(
       input.jobId
     );
 
-    console.log(`[PROCESS-EMAIL] Found matching application: ${application ? application.id : "NONE"}`);
+    console.log(`[job-tracking] match applicationId=${application ? application.id : "none"}`);
 
     const isNewApplication = !application;
 
     if (!application) {
-      console.log(`[PROCESS-EMAIL] Creating new application for ${input.position} at ${input.company}`);
+      console.log(`[job-tracking] create-application company="${input.company}" position="${input.position}"`);
       const [newApp] = await db
         .insert(jobApplications)
         .values({
@@ -275,9 +274,9 @@ export async function processRecruitmentEmail(
         .returning();
 
       application = newApp;
-      console.log(`[PROCESS-EMAIL] Created new application: ${application.id}`);
+      console.log(`[job-tracking] created applicationId=${application.id}`);
     } else {
-      console.log(`[PROCESS-EMAIL] Using existing application: ${application.id}`);
+      console.log(`[job-tracking] reuse applicationId=${application.id}`);
     }
 
     // 4. Insert the new event.
@@ -308,7 +307,7 @@ export async function processRecruitmentEmail(
       .set({ currentStatus: recalculatedStatus, updatedAt: new Date() })
       .where(eq(jobApplications.id, application.id));
 
-    console.log(`[PROCESS-EMAIL] Status set to "${recalculatedStatus}" for application ${application.id}`);
+    console.log(`[job-tracking] done applicationId=${application.id} status=${recalculatedStatus} isNew=${isNewApplication}`);
 
     return {
       success: true,
@@ -320,7 +319,7 @@ export async function processRecruitmentEmail(
         : `Updated existing application for ${input.position} at ${input.company}`,
     };
   } catch (error) {
-    console.error("[PROCESS-EMAIL] Error processing recruitment email:", error);
+    console.error(`[job-tracking] error emailId=${input.emailId}`, error);
     throw error;
   }
 }

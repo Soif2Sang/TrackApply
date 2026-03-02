@@ -6,15 +6,15 @@ import { listConnectedUserIds, listMessages, setPollCheckpoint } from "../servic
 import { boss, JOB_NAMES } from "./pgboss";
 
 export function startCronJobs() {
-  console.log("🕐 Starting cron jobs...");
+  console.log("[scheduler] starting cron jobs");
 
   // Poll all connected inboxes every 5 minutes
   schedule("*/5 * * * *", async () => {
-    console.log("🔄 Starting 5-minute inbox polling...");
+    console.log("[scheduler] poll start");
     
     try {
       const userIds = await listConnectedUserIds();
-      console.log(`📧 Found ${userIds.length} connected Gmail account(s)`);
+      console.log(`[scheduler] poll connectedUsers=${userIds.length}`);
 
       for (const userId of userIds) {
         try {
@@ -28,12 +28,13 @@ export function startCronJobs() {
             : new Date(now.getTime() - 10 * 60 * 1000);
 
           const result = await syncUserEmailsFromDate(userId, since);
+          console.log(`[scheduler] poll done userId=${userId} synced=${result.synced}`);
           await setPollCheckpoint(userId, {
             lastPolledAt: now,
             lastPollStatus: `ok:${result.synced}`,
           });
         } catch (error) {
-          console.error(`❌ Error polling user ${userId}:`, error);
+          console.error(`[scheduler] poll error userId=${userId}`, error);
           await setPollCheckpoint(userId, {
             lastPolledAt: new Date(),
             lastPollStatus: "error",
@@ -41,18 +42,18 @@ export function startCronJobs() {
         }
       }
 
-      console.log("✅ 5-minute inbox polling completed");
+      console.log("[scheduler] poll complete");
     } catch (error) {
-      console.error("❌ Error in inbox polling cron:", error);
+      console.error("[scheduler] poll fatal error", error);
     }
   });
 
-  console.log("✅ Cron jobs started");
+  console.log("[scheduler] cron jobs started");
 }
 
 // Sync emails for a specific user from a specific date
 export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
-  console.log(`📧 Syncing emails for user ${userId} from ${fromDate.toISOString().split("T")[0]}`);
+  console.log(`[sync] start userId=${userId} fromDate=${fromDate.toISOString().split("T")[0]}`);
 
   const userRecord = await db.query.user.findFirst({
     where: eq(user.id, userId),
@@ -63,7 +64,7 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
   });
 
   if (!userRecord || !connection?.gmailRefreshToken) {
-    console.log(`⚠️ User ${userId} has not connected Gmail`);
+    console.log(`[sync] skip reason=no_gmail_connection userId=${userId}`);
     return { synced: 0 };
   }
 
@@ -95,14 +96,14 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
       const messageList = messages.data.messages || [];
       page++;
 
-      console.log(`📨 Page ${page}: found ${messageList.length} messages for user ${userId}`);
+      console.log(`[sync] page=${page} found=${messageList.length} userId=${userId}`);
 
       for (const msg of messageList) {
         if (!msg.id) continue;
         allMessageIds.push(msg.id);
 
         if (maxTotal > 0 && allMessageIds.length >= maxTotal) {
-          console.log(`⚠️ Reached EMAIL_SYNC_MAX_TOTAL=${maxTotal}, stopping pagination`);
+          console.log(`[sync] max total reached maxTotal=${maxTotal} stopping pagination`);
           nextPageToken = undefined;
           break;
         }
@@ -118,7 +119,7 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
     // Gmail IDs are monotonically increasing integers — sort ascending to process oldest first
     allMessageIds.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
-    console.log(`📬 Enqueuing ${allMessageIds.length} messages oldest-first across ${page} page(s)`);
+    console.log(`[sync] enqueue count=${allMessageIds.length} pages=${page} order=oldest-first userId=${userId}`);
 
     for (const emailId of allMessageIds) {
       await boss.send(JOB_NAMES.PROCESS_EMAIL, {
@@ -142,10 +143,10 @@ export async function syncUserEmailsFromDate(userId: string, fromDate: Date) {
       })
       .where(eq(user.id, userId));
 
-    console.log(`✅ Queued ${queued} emails for processing across ${page} page(s)`);
+    console.log(`[sync] done queued=${queued} pages=${page} userId=${userId}`);
     return { synced: queued };
   } catch (error) {
-    console.error(`❌ Error listing messages for user ${userId}:`, error);
+    console.error(`[sync] error userId=${userId}`, error);
     throw error;
   }
 }

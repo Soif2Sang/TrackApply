@@ -101,7 +101,7 @@ gmailAuth.get("/callback", async (c) => {
   }
 
   if (error) {
-    console.error("OAuth error:", error);
+    console.error(`[gmail-auth] oauth error error=${error}`);
     return c.redirect(`${redirectBase}/?error=gmail_auth_failed`);
   }
 
@@ -118,12 +118,12 @@ gmailAuth.get("/callback", async (c) => {
   try {
     await exchangeCodeForUserTokens(userId, code);
 
-    console.log(`✅ Gmail connected successfully for user ${userId}`);
+    console.log(`[gmail-auth] connected userId=${userId}`);
 
     // Redirect back to app with success
     return c.redirect(`${redirectBase}/?gmail_connected=true`);
   } catch (error) {
-    console.error("Error exchanging OAuth code:", error);
+    console.error(`[gmail-auth] callback error userId=${userId}`, error);
     return c.redirect(`${redirectBase}/?error=token_exchange_failed`);
   }
 });
@@ -139,11 +139,11 @@ gmailAuth.post("/disconnect", async (c) => {
   try {
     await disconnectGmail(userId);
 
-    console.log(`✅ Gmail disconnected for user ${userId}`);
+    console.log(`[gmail-auth] disconnected userId=${userId}`);
     
     return c.json({ success: true });
   } catch (error) {
-    console.error("Error disconnecting Gmail:", error);
+    console.error(`[gmail-auth] disconnect error userId=${userId}`, error);
     return c.json({ error: "Failed to disconnect Gmail" }, 500);
   }
 });

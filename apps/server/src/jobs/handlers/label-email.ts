@@ -11,17 +11,17 @@ export async function labelEmail(jobs: Job<LabelEmailPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, threadId, labelIds } = job.data;
+  const log = (msg: string) => console.log(`[label-email:${job.id}] ${msg}`);
 
-  console.log(`[${job.id}] Applying labels to thread ${threadId}: ${labelIds.join(", ")}`);
+  log(`start threadId=${threadId} labels=[${labelIds.join(",")}] userId=${userId}`);
 
   try {
     const modifyStart = Date.now();
     await modifyLabels(userId, threadId, labelIds);
     const modifyMs = Date.now() - modifyStart;
 
-    const duration = Date.now() - startTime;
-    console.log(`[${job.id}] PERF label-email: gmail.modify=${modifyMs}ms total=${duration}ms`);
-    console.log(`[${job.id}] Labels applied in ${duration}ms`);
+    const totalMs = Date.now() - startTime;
+    log(`done threadId=${threadId} perf=gmail.modify:${modifyMs}ms,total:${totalMs}ms`);
 
     return {
       success: true,
@@ -29,7 +29,8 @@ export async function labelEmail(jobs: Job<LabelEmailPayload>[]) {
       labelIds,
     };
   } catch (error) {
-    console.error(`[${job.id}] Error applying labels:`, error);
+    const totalMs = Date.now() - startTime;
+    console.error(`[label-email:${job.id}] error threadId=${threadId} totalMs=${totalMs}ms`, error);
     throw error;
   }
 }

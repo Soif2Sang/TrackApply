@@ -23,8 +23,9 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, emailData } = job.data;
+  const log = (msg: string) => console.log(`[analyze-content:${job.id}] ${msg}`);
 
-  console.log(`[${job.id}] Analyzing content: "${emailData.subject}"`);
+  log(`start emailId=${emailData.emailId} subject="${emailData.subject}" userId=${userId}`);
 
   try {
     const classifyStart = Date.now();
@@ -36,13 +37,9 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
     });
     const classifyMs = Date.now() - classifyStart;
 
-    console.log(`[${job.id}] Classification: ${classification.classification} (${classification.confidence})`);
-    console.log(`[${job.id}] PERF analyze-content: classify=${classifyMs}ms`);
-
-    if (classification.classification === "OTHER" ) {
-      const duration = Date.now() - startTime;
-      console.log(`[${job.id}] PERF analyze-content: total=${duration}ms (skipped)`);
-      console.log(`[${job.id}] Skipping non-recruitment email`);
+    if (classification.classification === "OTHER") {
+      const totalMs = Date.now() - startTime;
+      log(`skip reason=not_recruitment classification=OTHER perf=classify:${classifyMs}ms,total:${totalMs}ms`);
       return {
         skipped: true,
         reason: "not_recruitment",
@@ -69,9 +66,7 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
     });
     const processMs = Date.now() - processStart;
 
-    console.log(`[${job.id}] Processed: ${result.message}`);
-    console.log(`[${job.id}] PERF analyze-content: processRecruitment=${processMs}ms`);
-
+    let enqueueLabelMs = 0;
     if (!result.skipped) {
       const labelIds = getLabelForClassification(
         classification.classification,
@@ -88,14 +83,17 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
           retryLimit: 3,
           expireInSeconds: 120,
         });
-        const enqueueLabelMs = Date.now() - enqueueLabelStart;
-        console.log(`[${job.id}] PERF analyze-content: enqueueLabel=${enqueueLabelMs}ms`);
+        enqueueLabelMs = Date.now() - enqueueLabelStart;
       }
     }
 
-    const duration = Date.now() - startTime;
-    console.log(`[${job.id}] PERF analyze-content: total=${duration}ms`);
-    console.log(`[${job.id}] Analysis completed in ${duration}ms`);
+    const totalMs = Date.now() - startTime;
+    log(
+      `done classification=${classification.classification} confidence=${classification.confidence}` +
+      ` company="${classification.company}" position="${classification.position}"` +
+      ` skipped=${result.skipped}` +
+      ` perf=classify:${classifyMs}ms,process:${processMs}ms,enqueueLabel:${enqueueLabelMs}ms,total:${totalMs}ms`
+    );
 
     return {
       success: true,
@@ -105,7 +103,8 @@ export async function analyzeContent(jobs: Job<AnalyzeContentPayload>[]) {
       skipped: result.skipped,
     };
   } catch (error) {
-    console.error(`[${job.id}] Error analyzing content:`, error);
+    const totalMs = Date.now() - startTime;
+    console.error(`[analyze-content:${job.id}] error emailId=${emailData.emailId} totalMs=${totalMs}ms`, error);
     throw error;
   }
 }

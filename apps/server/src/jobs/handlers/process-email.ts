@@ -12,10 +12,11 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
   const job = jobs[0];
   const startTime = Date.now();
   const { userId, emailId } = job.data;
+  const log = (msg: string) => console.log(`[process-email:${job.id}] ${msg}`);
   const analyzeRetryLimit = parseInt(process.env.ANALYZE_RETRY_LIMIT || "5", 10);
   const analyzeRetryDelay = parseInt(process.env.ANALYZE_RETRY_DELAY_SECONDS || "30", 10);
 
-  console.log(`[${job.id}] Processing email ${emailId} for user ${userId}`);
+  log(`start emailId=${emailId} userId=${userId}`);
 
   try {
     const getMessageStart = Date.now();
@@ -26,9 +27,6 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
     const extractStart = Date.now();
     const emailData = extractEmailData(message);
     const extractMs = Date.now() - extractStart;
-
-    console.log(`[${job.id}] Extracted email: "${emailData.subject}" from ${emailData.from}`);
-    console.log(`[${job.id}] PERF process-email: gmail.get=${getMessageMs}ms extract=${extractMs}ms`);
 
     const enqueueStart = Date.now();
     await sendJob(JOB_NAMES.ANALYZE_CONTENT, {
@@ -41,9 +39,8 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
     });
     const enqueueMs = Date.now() - enqueueStart;
 
-    const duration = Date.now() - startTime;
-    console.log(`[${job.id}] PERF process-email: enqueueAnalyze=${enqueueMs}ms total=${duration}ms`);
-    console.log(`[${job.id}] Email processed in ${duration}ms`);
+    const totalMs = Date.now() - startTime;
+    log(`done subject="${emailData.subject}" from="${emailData.from}" perf=gmail.get:${getMessageMs}ms,extract:${extractMs}ms,enqueue:${enqueueMs}ms,total:${totalMs}ms`);
 
     return {
       success: true,
@@ -51,7 +48,8 @@ export async function processEmail(jobs: Job<ProcessEmailPayload>[]) {
       subject: emailData.subject,
     };
   } catch (error) {
-    console.error(`[${job.id}] Error processing email:`, error);
-    throw error; // Will trigger retry
+    const totalMs = Date.now() - startTime;
+    console.error(`[process-email:${job.id}] error emailId=${emailId} totalMs=${totalMs}`, error);
+    throw error;
   }
 }

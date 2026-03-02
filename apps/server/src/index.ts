@@ -49,22 +49,22 @@ async function startServices() {
     // Start cron jobs for email sync
     startCronJobs();
     
-    console.log("✅ All background services started");
+    console.log("[server] all background services started");
   } catch (error) {
-    console.error("❌ Failed to start background services:", error);
+    console.error("[server] failed to start background services", error);
     process.exit(1);
   }
 }
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, shutting down gracefully...");
+  console.log("[server] SIGTERM received, shutting down gracefully");
   await stopPgBoss();
   process.exit(0);
 });
 
 process.on("SIGINT", async () => {
-  console.log("SIGINT received, shutting down gracefully...");
+  console.log("[server] SIGINT received, shutting down gracefully");
   await stopPgBoss();
   process.exit(0);
 });
@@ -74,7 +74,7 @@ serve({
   fetch: app.fetch,
   port,
 }, async (info) => {
-  console.log(`🚀 Server is running on http://localhost:${info.port}`);
+  console.log(`[server] listening port=${info.port}`);
   
   // Start background services after server is ready
   await startServices();

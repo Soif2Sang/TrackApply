@@ -35,18 +35,18 @@ export async function startPgBoss() {
 
     // Handle PG-Boss errors to prevent unhandled crashes
     boss.on("error", (error) => {
-      console.error("❌ PG-Boss error:", error);
+      console.error("[pgboss] error", error);
     });
 
     await boss.start();
-    console.log("✅ PG-Boss started successfully");
+    console.log("[pgboss] started");
 
     // Create queues before registering workers (required by pg-boss)
     await boss.createQueue(JOB_NAMES.PROCESS_EMAIL);
     await boss.createQueue(JOB_NAMES.ANALYZE_CONTENT);
     await boss.createQueue(JOB_NAMES.LABEL_EMAIL);
     await boss.createQueue(JOB_NAMES.SYNC_USER_EMAILS);
-    console.log("✅ Job queues created");
+    console.log("[pgboss] queues created");
 
     // Register job handlers
     boss.work(JOB_NAMES.PROCESS_EMAIL, { localConcurrency: processEmailConcurrency }, processEmail);
@@ -54,12 +54,10 @@ export async function startPgBoss() {
     boss.work(JOB_NAMES.LABEL_EMAIL, { localConcurrency: labelEmailConcurrency }, labelEmail);
 
     console.log(
-      `✅ Worker concurrency: process=${processEmailConcurrency}, analyze=${analyzeContentConcurrency}, label=${labelEmailConcurrency}`
+      `[pgboss] workers registered concurrency=process:${processEmailConcurrency},analyze:${analyzeContentConcurrency},label:${labelEmailConcurrency}`
     );
-
-    console.log("✅ Job workers registered");
   } catch (error) {
-    console.error("❌ Failed to start PG-Boss:", error);
+    console.error("[pgboss] failed to start", error);
     throw error;
   }
 }
@@ -68,9 +66,9 @@ export async function startPgBoss() {
 export async function stopPgBoss() {
   try {
     await boss.stop();
-    console.log("✅ PG-Boss stopped");
+    console.log("[pgboss] stopped");
   } catch (error) {
-    console.error("❌ Error stopping PG-Boss:", error);
+    console.error("[pgboss] error stopping", error);
   }
 }
 
