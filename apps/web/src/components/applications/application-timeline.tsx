@@ -1,4 +1,5 @@
 import { Mail, Clock, ArrowUpRight, ExternalLink, Check, GitBranch } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
   getGmailUrl,
@@ -151,16 +152,24 @@ export function ApplicationTimeline({
                         );
                       })}
                       {onDivergeEvent && (
-                        <button
-                          type="button"
-                          onClick={() => onDivergeEvent(event.id)}
-                          disabled={isDiverging || isSaving}
-                          title="Diverge - Move this email to a new application"
-                          className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-2 py-1 text-[10px] font-mono font-medium transition-all cursor-pointer disabled:opacity-50"
-                        >
-                          <GitBranch className="h-2.5 w-2.5" />
-                          Diverge
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => onDivergeEvent(event.id)}
+                              disabled={isDiverging || isSaving}
+                              className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 px-2 py-1 text-[10px] font-mono font-medium transition-all cursor-pointer disabled:opacity-50"
+                            >
+                              <GitBranch className="h-2.5 w-2.5" />
+                              Diverge
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-64 text-center leading-relaxed">
+                            The pipeline sometimes groups emails from different
+                            jobs under one application. Diverge moves this email
+                            into a brand-new, separate application.
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </div>
                   </div>

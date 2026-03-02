@@ -4,6 +4,7 @@ import { Loader2, Merge, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface FormValues {
@@ -161,26 +162,35 @@ export function ApplicationForm({
           )}
         </form.Subscribe>
 
-        <Button
-          type="button"
-          onClick={onMerge}
-          disabled={isMergePending}
-          size="sm"
-          variant="outline"
-          className="gap-2 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-400"
-        >
-          {isMergePending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Merging...
-            </>
-          ) : (
-            <>
-              <Merge className="h-3.5 w-3.5" />
-              Merge
-            </>
-          )}
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              onClick={onMerge}
+              disabled={isMergePending}
+              size="sm"
+              variant="outline"
+              className="gap-2 border-blue-500/30 text-blue-400 hover:bg-blue-500/10 hover:text-blue-400"
+            >
+              {isMergePending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Merging...
+                </>
+              ) : (
+                <>
+                  <Merge className="h-3.5 w-3.5" />
+                  Merge
+                </>
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-64 text-center leading-relaxed">
+            The email pipeline sometimes creates duplicate applications for the
+            same job. Merge moves all emails from this application into another
+            one and deletes this entry.
+          </TooltipContent>
+        </Tooltip>
 
         <Button
           type="button"
