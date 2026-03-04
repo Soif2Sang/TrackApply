@@ -202,8 +202,8 @@ export const jobTrackingRouter = t.router({
   updateApplication: requireAuth
     .input(z.object({
       id: z.string().uuid(),
-      company: z.string().min(1),
-      position: z.string().min(1),
+      company: z.string().min(1).nullable().optional(),
+      position: z.string().min(1).nullable().optional(),
       jobId: z.string().optional().nullable(),
       currentStatus: z.enum(applicationStatusEnum),
     }))
@@ -227,8 +227,8 @@ export const jobTrackingRouter = t.router({
       await db
         .update(jobApplications)
         .set({
-          company: input.company.trim(),
-          position: input.position.trim(),
+          company: input.company?.trim() ?? null,
+          position: input.position?.trim() ?? null,
           jobId: input.jobId?.trim() || null,
           currentStatus: input.currentStatus,
           updatedAt: new Date(),
@@ -469,8 +469,8 @@ export const jobTrackingRouter = t.router({
 
   createApplication: requireAuth
     .input(z.object({
-      company: z.string().min(1, "Company is required"),
-      position: z.string().min(1, "Position is required"),
+      company: z.string().min(1, "Company is required").nullable().optional(),
+      position: z.string().min(1, "Position is required").nullable().optional(),
       jobId: z.string().optional().nullable(),
       source: z.string().default("manual"),
       currentStatus: z.enum(applicationStatusEnum).default("applied"),
@@ -484,8 +484,8 @@ export const jobTrackingRouter = t.router({
         .insert(jobApplications)
         .values({
           userId,
-          company: input.company.trim(),
-          position: input.position.trim(),
+          company: input.company?.trim() ?? null,
+          position: input.position?.trim() ?? null,
           jobId: input.jobId?.trim() || null,
           currentStatus: input.currentStatus,
           source: input.source,
@@ -498,9 +498,9 @@ export const jobTrackingRouter = t.router({
         applicationId: newApplication.id,
         classification: "acknowledged",
         emailId: `manual-${Date.now()}`,
-        subject: `Application sent for ${input.position} at ${input.company}`,
+        subject: `Application sent for ${input.position ?? "Unknown Position"} at ${input.company ?? "Unknown Company"}`,
         from: userId,
-        to: input.company,
+        to: input.company ?? "",
         date: eventDate,
         confidence: "high",
       });
@@ -550,20 +550,21 @@ export const jobTrackingRouter = t.router({
       }
 
       // Create new application from the event
-      // Try to extract company from subject or use "Unknown Company"
+      // Try to extract company/position from subject, fall back to source app values, or null
       const subjectCompany = event.subject.match(/(?:applying to|at|from)\s+(\S+)/i)?.[1];
-      const company = subjectCompany || sourceApp.company || "Unknown Company";
-      const position = event.subject.match(/(?:for|as)\s+(\S+)\s+(?:position|role)/i)?.[1] || 
-                       event.subject.match(/(\S+)\s+(?:position|role)/i)?.[1] || 
-                       sourceApp.position || 
-                       "Unknown Position";
+      const company = subjectCompany ?? sourceApp.company ?? null;
+      const position =
+        event.subject.match(/(?:for|as)\s+(\S+)\s+(?:position|role)/i)?.[1] ??
+        event.subject.match(/(\S+)\s+(?:position|role)/i)?.[1] ??
+        sourceApp.position ??
+        null;
 
       const [newApplication] = await db
         .insert(jobApplications)
         .values({
           userId,
-          company: company.trim(),
-          position: position.trim(),
+          company: company?.trim() ?? null,
+          position: position?.trim() ?? null,
           currentStatus: replayEventsToStatus([event]),
           source: "email",
         })

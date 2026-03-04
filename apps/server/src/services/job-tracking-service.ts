@@ -110,11 +110,11 @@ const POSITION_FUZZY_THRESHOLD = 0.6;
 //   3. Exact company + position match
 //   4. High-similarity fuzzy company + position match
 // ---------------------------------------------------------------------------
-async function findMatchingApplication(
+export async function findMatchingApplication(
   userId: string,
-  threadId: string | undefined | null,
-  company: string,
-  position: string,
+  threadId?: string | null,
+  company?: string | null,
+  position?: string | null,
   jobId?: string | null
 ) {
   // Strategy 1: thread-based match — any event in the same Gmail thread
@@ -141,22 +141,26 @@ async function findMatchingApplication(
   }
 
   // Strategies 3 & 4: text-based matching.
-  const isUnknownCompany = !company || company === "Unknown Company";
-  if (isUnknownCompany) return null;
+  // If we have a jobId but Strategy 2 found nothing, this is definitively a new
+  // application — skip fuzzy matching entirely to avoid cross-contamination
+  // (e.g. two Amazon positions with different jobIds but similar titles).
+  if (jobId) return null;
+
+  if (!company) return null;
 
   const allApplications = await db.query.jobApplications.findMany({
     where: eq(jobApplications.userId, userId),
   });
 
   const normalizedCompany  = normalizeText(company);
-  const normalizedPosition = normalizeText(position);
-  const isUnknownPosition  = !position || position === "Unknown Position";
+  const normalizedPosition = normalizeText(position ?? "");
+  const isUnknownPosition  = !position;
 
   let bestMatch: (typeof allApplications)[number] | null = null;
   let bestScore = -1;
 
   for (const app of allApplications) {
-    const appCompany  = normalizeText(app.company);
+    const appCompany  = normalizeText(app.company ?? "");
     const appPosition = normalizeText(app.position ?? "");
 
     const companySimilarity = diceSimilarity(appCompany, normalizedCompany);
@@ -164,7 +168,7 @@ async function findMatchingApplication(
     // Company must be at least fuzzy-similar to continue.
     if (companySimilarity < COMPANY_FUZZY_THRESHOLD) continue;
 
-    const isAppPositionUnknown = !app.position || app.position === "Unknown Position";
+    const isAppPositionUnknown = !app.position;
     const positionSimilarity =
       isUnknownPosition || isAppPositionUnknown
         ? 1 // treat unknown on either side as a wildcard
@@ -190,11 +194,13 @@ async function findMatchingApplication(
 // ---------------------------------------------------------------------------
 // Deduplication helpers.
 // ---------------------------------------------------------------------------
-async function eventExists(emailId: string): Promise<boolean> {
+async function eventExists(userId: string, emailId: string): Promise<boolean> {
   const existing = await db.query.applicationEvents.findFirst({
     where: eq(applicationEvents.emailId, emailId),
+    with: { application: true },
   });
-  return !!existing;
+  // Only count as duplicate if the event belongs to the same user.
+  return !!existing && existing.application?.userId === userId;
 }
 
 async function isEmailIgnored(userId: string, emailId: string): Promise<boolean> {
@@ -234,7 +240,7 @@ export async function processRecruitmentEmail(
     }
 
     // 2. Deduplication check — must happen before any insert.
-    if (await eventExists(input.emailId)) {
+    if (await eventExists(userId, input.emailId)) {
       log.info(`skip reason=duplicate emailId=${input.emailId}`);
       const existingEvent = await db.query.applicationEvents.findFirst({
         where: eq(applicationEvents.emailId, input.emailId),
@@ -254,8 +260,8 @@ export async function processRecruitmentEmail(
     let application = await findMatchingApplication(
       userId,
       input.threadId,
-      input.company || "Unknown Company",
-      input.position || "Unknown Position",
+      input.company,
+      input.position,
       input.jobId
     );
 
@@ -269,9 +275,9 @@ export async function processRecruitmentEmail(
         .insert(jobApplications)
         .values({
           userId,
-          company:       input.company  || "Unknown Company",
-          position:      input.position || "Unknown Position",
-          jobId:         input.jobId    || null,
+          company:       input.company,
+          position:      input.position,
+          jobId:         input.jobId,
           currentStatus: "applied",
           source:        "email",
         })

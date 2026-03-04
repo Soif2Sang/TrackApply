@@ -3,7 +3,7 @@ import { eventClassificationEnum } from "../db/schema/job-applications";
 import type { Logger } from "../lib/logger";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite-preview";
 
 export type EventClassification = (typeof eventClassificationEnum)[number];
 
@@ -34,19 +34,25 @@ CATEGORIES:
 7. OTHER - Not related to job applications or recruitment.
 
 CLASSIFICATION RULES:
-- If the email is a generic acknowledgment with no next step, use ACKNOWLEDGED.
+- REJECTED takes highest priority: if anywhere in the email you see phrases like "decided to progress with other candidates", "will not be moving forward", "we won't be moving forward", "not selected", "not successful", "position has been filled", "decided not to proceed", "unfortunately" combined with a hiring decision, or any equivalent rejection language — classify as REJECTED regardless of how polite the opener is. Many rejection emails open with "Thank you for your application" before delivering the rejection — always read the full body.
+- If the email is a generic acknowledgment with no next step and no rejection, use ACKNOWLEDGED.
 - If the email mentions a recruiter call or phone screen, use SCREENING.
 - If the email mentions a formal interview (video call with the team, on-site, panel), use INTERVIEW.
 - If the email mentions a coding test, take-home assignment, or technical assessment, use TECHNICAL.
 - If the email contains a job offer with compensation or start date details, use OFFER.
-- If the email indicates the candidate is no longer being considered, use REJECTED.
 - When in doubt between two categories, pick the more advanced one (e.g. INTERVIEW over SCREENING).
 
 EXTRACTION RULES:
 - For categories 1-6 (recruitment emails), extract:
   * Position: The job title applied for
   * Company: The company name (or email domain if name is not explicit)
-  * Job ID: Any reference number, job code, or requisition ID mentioned
+  * Job ID: The official job/requisition ID assigned by the employer's ATS (Applicant Tracking System) to the specific job posting. Look for labels like "Job ID", "Req ID", "Requisition ID", "Reference number", "(ID: 123456)". These are typically short numeric codes or short alphanumeric ATS references directly tied to the job posting itself.
+    IMPORTANT — do NOT extract as job_id:
+    - Interview codes or session tokens (e.g. HireVue "Interview Code: Xxx1abc-12abcd", video interview links)
+    - Verification codes or OTP codes
+    - Application tracking URLs or link tokens
+    - Any long random-looking alphanumeric string that is clearly a session/token identifier rather than a job reference
+    If you are not confident the value is a genuine job/requisition ID assigned to the role, return null.
 - Return null for any field you cannot find.
 
 OUTPUT FORMAT (JSON only, no markdown, no explanation):
@@ -61,13 +67,12 @@ OUTPUT FORMAT (JSON only, no markdown, no explanation):
 const USER_PROMPT_TEMPLATE = `EMAIL TO ANALYZE:
 Subject: {{subject}}
 From: {{from}}
-{{snippet}}
 Body:
 {{body}}
-
 RESPOND WITH JSON ONLY`;
 
-const MAX_BODY_LENGTH = 3000;
+// Generous limit — rejection signals often appear late in the email body.
+const MAX_BODY_LENGTH = 8000;
 
 function stripHtml(html: string): string {
   return html
@@ -89,14 +94,10 @@ function stripHtml(html: string): string {
 
 function generatePrompt(input: EmailInput): string {
   const body = stripHtml(input.body).slice(0, MAX_BODY_LENGTH);
-  const snippetLine = input.snippet
-    ? `Snippet: ${input.snippet}\n`
-    : "";
 
   return USER_PROMPT_TEMPLATE
     .replace("{{subject}}", input.subject)
     .replace("{{from}}", input.from)
-    .replace("{{snippet}}", snippetLine)
     .replace("{{body}}", body);
 }
 
@@ -177,9 +178,9 @@ export async function classifyEmail(input: EmailInput, logger: Logger): Promise<
 
     return {
       classification: mappedClassification,
-      position:       parsed.position,
-      company:        parsed.company,
-      jobId:          parsed.job_id,
+      position:       parsed.position as string | null,
+      company:        parsed.company as string | null,
+      jobId:          parsed.job_id as string | null,
       confidence:     parsed.confidence as "high" | "medium" | "low",
     };
   } catch (error) {
