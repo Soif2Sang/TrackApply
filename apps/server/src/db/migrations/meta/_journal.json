@@ -85,6 +85,13 @@
       "when": 1772458160222,
       "tag": "0011_same_risque",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1772458160223,
+      "tag": "0012_nullable_company_position",
+      "breakpoints": true
     }
   ]
 }

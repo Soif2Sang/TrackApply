@@ -30,8 +30,8 @@ export const jobApplications = pgTable("job_applications", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  company: text("company").notNull(),
-  position: text("position").notNull(),
+  company: text("company"),
+  position: text("position"),
   jobId: text("job_id"),
   currentStatus: text("current_status").notNull().$type<typeof applicationStatusEnum[number]>(),
   source: text("source").default("email"),
