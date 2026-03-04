@@ -8,8 +8,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { cn } from "@/lib/utils";
 
 interface FormValues {
-  company: string;
-  position: string;
+  company: string | null;
+  position: string | null;
   jobId: string;
 }
 
@@ -35,7 +35,11 @@ export function ApplicationForm({
   const form = useForm({
     defaultValues: initialValues,
     onSubmit: ({ value }: { value: FormValues }) => {
-      onSave(value);
+      onSave({
+        company: value.company?.trim() || null,
+        position: value.position?.trim() || null,
+        jobId: value.jobId,
+      });
     },
   });
 
@@ -51,68 +55,46 @@ export function ApplicationForm({
       <h2 className="text-sm font-medium text-foreground mb-4">Edit Application</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <form.Field
-          name="company"
-          validators={{
-            onChange: ({ value }) =>
-              !value.trim() ? "Company is required" : undefined,
-          }}
-        >
+        <form.Field name="company">
           {(field) => (
             <div className="space-y-2">
               <Label
                 htmlFor={field.name}
                 className="text-xs uppercase tracking-wider text-muted-foreground"
               >
-                Company *
+                Company
               </Label>
               <Input
                 id={field.name}
                 name={field.name}
-                value={field.state.value}
+                value={field.state.value ?? ""}
                 onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                className={cn(
-                  "h-9 bg-secondary border-border text-foreground text-sm",
-                  field.state.meta.errors.length > 0 && "border-red-500"
-                )}
+                onChange={(e) => field.handleChange(e.target.value || null)}
+                placeholder="Unknown"
+                className="h-9 bg-secondary border-border text-foreground text-sm"
               />
-              {field.state.meta.errors.length > 0 && (
-                <p className="text-xs text-red-500">{field.state.meta.errors[0]}</p>
-              )}
             </div>
           )}
         </form.Field>
 
-        <form.Field
-          name="position"
-          validators={{
-            onChange: ({ value }) =>
-              !value.trim() ? "Position is required" : undefined,
-          }}
-        >
+        <form.Field name="position">
           {(field) => (
             <div className="space-y-2">
               <Label
                 htmlFor={field.name}
                 className="text-xs uppercase tracking-wider text-muted-foreground"
               >
-                Position *
+                Position
               </Label>
               <Input
                 id={field.name}
                 name={field.name}
-                value={field.state.value}
+                value={field.state.value ?? ""}
                 onBlur={field.handleBlur}
-                onChange={(e) => field.handleChange(e.target.value)}
-                className={cn(
-                  "h-9 bg-secondary border-border text-foreground text-sm",
-                  field.state.meta.errors.length > 0 && "border-red-500"
-                )}
+                onChange={(e) => field.handleChange(e.target.value || null)}
+                placeholder="Unknown"
+                className="h-9 bg-secondary border-border text-foreground text-sm"
               />
-              {field.state.meta.errors.length > 0 && (
-                <p className="text-xs text-red-500">{field.state.meta.errors[0]}</p>
-              )}
             </div>
           )}
         </form.Field>

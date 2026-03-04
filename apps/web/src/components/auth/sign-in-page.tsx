@@ -175,11 +175,11 @@ export function SignInPage({ onSignIn, isLoading }: SignInPageProps) {
                 
                 <div className="absolute right-4 bottom-8 flex flex-col gap-3 opacity-80 group-hover:opacity-100 transition-all translate-x-4 translate-y-4 group-hover:translate-x-0 group-hover:translate-y-0 duration-500 ease-out">
                   <div className="bg-background/90 backdrop-blur border border-border shadow-sm rounded-xl px-4 py-2.5 flex items-center gap-3 transform group-hover:-rotate-2 transition-transform">
-                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.6)] animate-pulse"></span>
                     <span className="text-sm font-semibold">Interview</span>
                   </div>
                   <div className="bg-background/90 backdrop-blur border border-border shadow-sm rounded-xl px-4 py-2.5 flex items-center gap-3 -ml-8 transform group-hover:rotate-1 transition-transform">
-                    <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.6)]"></span>
                     <span className="text-sm font-semibold">Acknowledged</span>
                   </div>
                   <div className="bg-background/90 backdrop-blur border border-border shadow-sm rounded-xl px-4 py-2.5 flex items-center gap-3 -ml-4 transform group-hover:-rotate-1 transition-transform">

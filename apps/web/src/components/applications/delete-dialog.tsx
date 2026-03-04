@@ -14,7 +14,7 @@ interface DeleteDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
-  company: string;
+  company: string | null;
   isPending: boolean;
   ignoreEmails: boolean;
   onIgnoreEmailsChange: (checked: boolean) => void;
@@ -36,7 +36,7 @@ export function DeleteDialog({
           <DialogTitle className="text-foreground">Delete Application</DialogTitle>
           <DialogDescription className="text-muted-foreground">
             Are you sure you want to delete this application for{" "}
-            <span className="text-foreground font-medium">{company}</span>? This
+            <span className="text-foreground font-medium">{company ?? "Unknown company"}</span>? This
             action cannot be undone and will remove all associated emails and
             events.
           </DialogDescription>

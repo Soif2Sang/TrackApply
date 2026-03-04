@@ -39,21 +39,21 @@ interface ApplicationTimelineProps {
 }
 
 const DOT_COLOR: Record<string, string> = {
-  acknowledged: "bg-blue-400",
-  screening:    "bg-emerald-400",
-  interview:    "bg-purple-400",
-  technical:    "bg-orange-400",
-  offer:        "bg-green-400",
-  rejected:     "bg-red-400",
+  acknowledged: "bg-sky-400",
+  screening:    "bg-amber-400",
+  interview:    "bg-violet-400",
+  technical:    "bg-cyan-400",
+  offer:        "bg-emerald-400",
+  rejected:     "bg-rose-400",
 };
 
 const RING_COLOR: Record<string, string> = {
-  acknowledged: "border-blue-400/40",
-  screening:    "border-emerald-400/40",
-  interview:    "border-purple-400/40",
-  technical:    "border-orange-400/40",
-  offer:        "border-green-400/40",
-  rejected:     "border-red-400/40",
+  acknowledged: "border-sky-400/40",
+  screening:    "border-amber-400/40",
+  interview:    "border-violet-400/40",
+  technical:    "border-cyan-400/40",
+  offer:        "border-emerald-400/40",
+  rejected:     "border-rose-400/40",
 };
 
 export function ApplicationTimeline({

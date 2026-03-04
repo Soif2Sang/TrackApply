@@ -13,8 +13,8 @@ import { StatusBadge, statusConfig } from "@/components/status-badge";
 import { STATUS_OPTIONS } from "@/constants/applications";
 
 interface ApplicationHeaderProps {
-  company: string;
-  position: string;
+  company: string | null;
+  position: string | null;
   jobId: string | null;
   currentStatus: string;
   isPending: boolean;
@@ -44,7 +44,7 @@ export function ApplicationHeader({
 
       <div className="flex items-center gap-3">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          {company}
+          {company ?? <span className="text-muted-foreground/50 italic">Unknown company</span>}
         </h1>
 
         <Select
@@ -77,7 +77,7 @@ export function ApplicationHeader({
       </div>
 
       <p className="text-base text-muted-foreground">
-        {position}
+        {position ?? <span className="italic text-muted-foreground/40">Unknown position</span>}
         {jobId && <span className="ml-2 text-muted-foreground/60">· {jobId}</span>}
       </p>
     </div>

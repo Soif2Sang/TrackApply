@@ -20,7 +20,7 @@ const stats = [
     key: "screening",
     label: "Screening",
     icon: Loader2,
-    iconClass: "text-emerald-400",
+    iconClass: "text-amber-400",
   },
   {
     key: "acknowledged",
@@ -32,7 +32,7 @@ const stats = [
     key: "rejected",
     label: "Rejected",
     icon: XCircle,
-    iconClass: "text-red-400",
+    iconClass: "text-rose-400",
   },
 ] as const;
 

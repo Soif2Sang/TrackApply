@@ -51,7 +51,7 @@ function ApplicationDetailPage() {
     }
   };
 
-  const handleSaveApplication = (values: { company: string; position: string; jobId: string }) => {
+  const handleSaveApplication = (values: { company: string | null; position: string | null; jobId: string }) => {
     if (!application) return;
     mutations.updateApplication({
       id: application.id,
@@ -130,8 +130,8 @@ function ApplicationDetailPage() {
 
         <ApplicationForm
           initialValues={{
-            company: application.company,
-            position: application.position,
+            company: application.company ?? null,
+            position: application.position ?? null,
             jobId: application.jobId || "",
           }}
           onSave={handleSaveApplication}

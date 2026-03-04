@@ -18,8 +18,8 @@ export function useMergeTargets(currentApplicationId: string) {
     const query = searchQuery.toLowerCase();
     return availableTargets.filter(
       (app) =>
-        app.company.toLowerCase().includes(query) ||
-        app.position.toLowerCase().includes(query)
+        app.company?.toLowerCase().includes(query) ||
+        app.position?.toLowerCase().includes(query)
     );
   }, [availableTargets, searchQuery]);
 

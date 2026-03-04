@@ -15,8 +15,8 @@ import { cn } from "@/lib/utils";
 
 interface MergeTarget {
   id: string;
-  company: string;
-  position: string;
+  company: string | null;
+  position: string | null;
 }
 
 interface MergeDialogProps {
@@ -26,8 +26,8 @@ interface MergeDialogProps {
   targets: MergeTarget[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  currentCompany: string;
-  currentPosition: string;
+  currentCompany: string | null;
+  currentPosition: string | null;
   isPending: boolean;
   hasTargets: boolean;
 }
@@ -74,7 +74,7 @@ export function MergeDialog({
           <DialogDescription className="text-muted-foreground">
             Merge{" "}
             <span className="text-foreground font-medium">
-              {currentCompany} - {currentPosition}
+              {currentCompany ?? "Unknown company"} - {currentPosition ?? "Unknown position"}
             </span>{" "}
             into another application. All emails and events will be moved to the
             selected application.
@@ -122,11 +122,11 @@ export function MergeDialog({
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-foreground">
-                          {targetApp.company}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {targetApp.position}
-                        </p>
+                            {targetApp.company ?? <span className="italic text-muted-foreground">Unknown company</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {targetApp.position ?? <span className="italic">Unknown position</span>}
+                          </p>
                       </div>
                       {selectedTargetId === targetApp.id && (
                         <Check className="h-4 w-4 text-blue-400" />

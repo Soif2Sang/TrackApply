@@ -11,9 +11,9 @@ const badgeVariants = cva(
       variant: {
         default: "bg-secondary text-secondary-foreground",
         applied: "bg-emerald-500/20 text-emerald-400",
-        interview: "bg-blue-500/20 text-blue-400",
-        offer: "bg-purple-500/20 text-purple-400",
-        rejected: "bg-red-500/20 text-red-400",
+        interview: "bg-violet-500/20 text-violet-400",
+        offer: "bg-emerald-500/20 text-emerald-400",
+        rejected: "bg-rose-500/20 text-rose-400",
         ghosted: "bg-muted text-muted-foreground",
         secondary: "bg-secondary text-secondary-foreground",
         destructive: "bg-destructive text-destructive-foreground",

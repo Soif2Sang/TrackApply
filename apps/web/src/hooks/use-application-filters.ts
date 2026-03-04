@@ -2,8 +2,8 @@ import { useState, useMemo } from "react";
 
 interface Application {
   id: string;
-  company: string;
-  position: string;
+  company: string | null;
+  position: string | null;
   jobId: string | null;
   currentStatus: string;
   source: string | null;
@@ -50,8 +50,8 @@ export function useApplicationFilters(applications: Application[] | undefined) {
     return applications.filter((app) => {
       const matchesSearch =
         !searchQuery ||
-        app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.position.toLowerCase().includes(searchQuery.toLowerCase());
+        app.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        app.position?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus =
         activeStatuses.size === 0 || activeStatuses.has(app.currentStatus);
       return matchesSearch && matchesStatus;

@@ -76,8 +76,8 @@ export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: Jo
     
     let result = applications.filter((app) => {
       const matchesSearch = !searchQuery || 
-        app.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        app.position.toLowerCase().includes(searchQuery.toLowerCase());
+        (app.company?.toLowerCase() ?? "").includes(searchQuery.toLowerCase()) ||
+        (app.position?.toLowerCase() ?? "").includes(searchQuery.toLowerCase());
       
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(app.currentStatus);
       
@@ -88,10 +88,10 @@ export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: Jo
       let cmp = 0;
       switch (sortField) {
         case "company":
-          cmp = a.company.localeCompare(b.company);
+          cmp = (a.company ?? "").localeCompare(b.company ?? "");
           break;
         case "position":
-          cmp = a.position.localeCompare(b.position);
+          cmp = (a.position ?? "").localeCompare(b.position ?? "");
           break;
         case "status":
           cmp = a.currentStatus.localeCompare(b.currentStatus);
@@ -201,10 +201,10 @@ export function JobApplicationsTable({ searchQuery = "", statusFilter = [] }: Jo
                 onClick={() => navigate({ to: "/applications/$id", params: { id: app.id } })}
               >
                 <TableCell className="font-medium text-foreground">
-                  {app.company}
+                  {app.company ?? <span className="italic text-muted-foreground/50">Unknown company</span>}
                 </TableCell>
                 <TableCell className="text-muted-foreground text-sm max-w-[320px] truncate">
-                  {app.position}
+                  {app.position ?? <span className="italic text-muted-foreground/50">Unknown position</span>}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={app.currentStatus} />

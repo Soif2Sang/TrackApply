@@ -36,23 +36,23 @@ export const STATUS_OPTIONS = [
 
 export const STATUS_STYLES: Record<string, string> = {
   applied: "border-border/40 text-foreground hover:bg-muted",
-  acknowledged: "border-blue-500/30 text-blue-400 hover:bg-blue-500/10",
-  screening: "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10",
-  interview: "border-purple-500/30 text-purple-400 hover:bg-purple-500/10",
-  technical: "border-orange-500/30 text-orange-400 hover:bg-orange-500/10",
-  offer: "border-green-500/30 text-green-400 hover:bg-green-500/10",
-  rejected: "border-red-500/30 text-red-400 hover:bg-red-500/10",
+  acknowledged: "border-sky-500/30 text-sky-400 hover:bg-sky-500/10",
+  screening: "border-amber-500/30 text-amber-400 hover:bg-amber-500/10",
+  interview: "border-violet-500/30 text-violet-400 hover:bg-violet-500/10",
+  technical: "border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10",
+  offer: "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10",
+  rejected: "border-rose-500/30 text-rose-400 hover:bg-rose-500/10",
   withdrawn: "border-muted-foreground/30 text-muted-foreground hover:bg-muted",
 };
 
 export const STATUS_STYLES_ACTIVE: Record<string, string> = {
   applied: "bg-foreground/15 border-foreground/60 text-foreground",
-  acknowledged: "bg-blue-500/20 border-blue-500/60 text-blue-400",
-  screening: "bg-emerald-500/20 border-emerald-500/60 text-emerald-400",
-  interview: "bg-purple-500/20 border-purple-500/60 text-purple-400",
-  technical: "bg-orange-500/20 border-orange-500/60 text-orange-400",
-  offer: "bg-green-500/20 border-green-500/60 text-green-400",
-  rejected: "bg-red-500/20 border-red-500/60 text-red-400",
+  acknowledged: "bg-sky-500/20 border-sky-500/60 text-sky-400",
+  screening: "bg-amber-500/20 border-amber-500/60 text-amber-400",
+  interview: "bg-violet-500/20 border-violet-500/60 text-violet-400",
+  technical: "bg-cyan-500/20 border-cyan-500/60 text-cyan-400",
+  offer: "bg-emerald-500/20 border-emerald-500/60 text-emerald-400",
+  rejected: "bg-rose-500/20 border-rose-500/60 text-rose-400",
   withdrawn: "bg-muted border-muted-foreground/60 text-muted-foreground",
 };
 
