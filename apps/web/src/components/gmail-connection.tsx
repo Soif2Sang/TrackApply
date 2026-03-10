@@ -625,6 +625,15 @@ export function GmailConnection() {
                       : "Use your saved OAuth credentials to connect your Gmail account."}
                   </p>
 
+                  <div className="rounded-md bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3">
+                    <p className="text-[11px] text-red-800 dark:text-red-200">
+                      <strong>Important:</strong> If your OAuth app is in "Testing" mode,
+                      refresh tokens expire after ~7 days of inactivity. To get long-lived tokens
+                      (~6 months), publish your app in the OAuth consent screen. Until then,
+                      you may need to reconnect Gmail periodically.
+                    </p>
+                  </div>
+
                   <div className="flex items-center gap-3">
                     {isConnected ? (
                       <Button
