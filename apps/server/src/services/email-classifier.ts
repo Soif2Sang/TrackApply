@@ -45,7 +45,17 @@ CLASSIFICATION RULES:
 EXTRACTION RULES:
 - For categories 1-6 (recruitment emails), extract:
   * Position: The job title applied for
-  * Company: The company name (or email domain if name is not explicit)
+  * Company: The hiring organization's official company name.
+    - Prefer the sender's email domain as a strong signal for company name
+      (e.g. wisestart@wise.com → "Wise", recruiter@reaktor.com → "Reaktor")
+    - EXCEPTION: Ignore the domain if it belongs to a known recruitment/ATS platform.
+      In those cases, extract the company name from the email body or the subdomain/prefix instead.
+      Known platforms to ignore: myworkday.com, greenhouse.io, lever.co, ashbyhq.com,
+      smartrecruiters.com, jobvite.com, taleo.net, icims.com, successfactors.com,
+      brassring.com, recruitee.com, workable.com, dover.com, rippling.com
+    - For ATS emails, use the subdomain or local-part as a hint:
+      activision@myworkday.com → look for "Activision" in body, fallback to "activision" prefix
+    - Return null only if no company signal exists anywhere in the email
   * Job ID: The official job/requisition ID assigned by the employer's ATS (Applicant Tracking System) to the specific job posting. Look for labels like "Job ID", "Req ID", "Requisition ID", "Reference number", "(ID: 123456)". These are typically short numeric codes or short alphanumeric ATS references directly tied to the job posting itself.
     IMPORTANT — do NOT extract as job_id:
     - Interview codes or session tokens (e.g. HireVue "Interview Code: Xxx1abc-12abcd", video interview links)

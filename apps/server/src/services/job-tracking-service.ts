@@ -287,6 +287,22 @@ export async function processRecruitmentEmail(
       log.info(`created applicationId=${application.id}`);
     } else {
       log.info(`reuse applicationId=${application.id}`);
+
+      if (application.position == null && input.position) {
+        await db
+          .update(jobApplications)
+          .set({ position: input.position, updatedAt: new Date() })
+          .where(eq(jobApplications.id, application.id));
+        log.info(`updated applicationId=${application.id} with new position="${input.position}"`);
+      }
+
+      if (application.jobId == null && input.jobId) {
+        await db
+          .update(jobApplications)
+          .set({ jobId: input.jobId, updatedAt: new Date() })
+          .where(eq(jobApplications.id, application.id));
+        log.info(`updated applicationId=${application.id} with new jobId="${input.jobId}"`);
+      }
     }
 
     // 4. Insert the new event.
