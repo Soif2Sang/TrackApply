@@ -25,7 +25,12 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeComponent() {
-  const [searchQueryFromUrl, setSearchQueryFromUrl] = useQueryState("q");
+  const [searchQueryFromUrl, setSearchQueryFromUrl] = useQueryState("q", {
+    defaultValue: "",
+    clearOnDefault: true,
+    history: "replace",
+    shallow: true,
+  });
   const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const { data: applications } = useQuery(
     trpc.jobTracking.getApplications.queryOptions()
@@ -41,9 +46,9 @@ function HomeComponent() {
     statusCounts,
     filteredCount,
   } = useApplicationFilters(applications, {
-    searchQuery: searchQueryFromUrl ?? "",
+    searchQuery: searchQueryFromUrl,
     onSearchQueryChange: (nextQuery) => {
-      void setSearchQueryFromUrl(nextQuery.trim().length > 0 ? nextQuery : null);
+      void setSearchQueryFromUrl(nextQuery);
     },
   });
 

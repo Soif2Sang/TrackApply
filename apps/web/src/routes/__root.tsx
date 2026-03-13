@@ -43,7 +43,10 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootComponent() {
   const isFetching = useRouterState({
-    select: (s) => s.isLoading,
+    select: (s) =>
+      s.isLoading &&
+      s.location.pathname !==
+        (s.resolvedLocation?.pathname ?? s.location.pathname),
   });
 
 
