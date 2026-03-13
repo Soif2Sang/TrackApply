@@ -13,9 +13,20 @@ interface Application {
   lastUpdateAt: string;
 }
 
-export function useApplicationFilters(applications: Application[] | undefined) {
-  const [searchQuery, setSearchQuery] = useState("");
+interface UseApplicationFiltersOptions {
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
+}
+
+export function useApplicationFilters(
+  applications: Application[] | undefined,
+  options?: UseApplicationFiltersOptions
+) {
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [activeStatuses, setActiveStatuses] = useState<Set<string>>(new Set());
+
+  const searchQuery = options?.searchQuery ?? localSearchQuery;
+  const setSearchQuery = options?.onSearchQueryChange ?? setLocalSearchQuery;
 
   const statusCounts = useMemo(() => {
     if (!applications) return {} as Record<string, number>;

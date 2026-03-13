@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import z from "zod";
 import { authClient } from "@/lib/auth-client";
 import { JobApplicationsTable } from "@/components/job-applications-table";
 import { GmailConnection } from "@/components/gmail-connection";
@@ -16,9 +17,15 @@ import { useCreateApplication } from "@/hooks/use-create-application";
 
 export const Route = createFileRoute("/")({
   component: HomeComponent,
+  validateSearch: (search: Record<string, unknown>) =>
+    z.object({
+      q: z.string().optional(),
+    }).parse(search),
 });
 
 function HomeComponent() {
+  const navigate = Route.useNavigate();
+  const { q } = Route.useSearch();
   const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const { data: applications } = useQuery(
     trpc.jobTracking.getApplications.queryOptions()
@@ -33,7 +40,18 @@ function HomeComponent() {
     hasFilters,
     statusCounts,
     filteredCount,
-  } = useApplicationFilters(applications);
+  } = useApplicationFilters(applications, {
+    searchQuery: q ?? "",
+    onSearchQueryChange: (nextQuery) => {
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          q: nextQuery.trim().length > 0 ? nextQuery : undefined,
+        }),
+        replace: true,
+      });
+    },
+  });
 
   const createApplication = useCreateApplication();
 
