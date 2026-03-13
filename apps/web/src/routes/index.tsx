@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
+import { useQueryState } from "nuqs";
 import { authClient } from "@/lib/auth-client";
 import { JobApplicationsTable } from "@/components/job-applications-table";
 import { GmailConnection } from "@/components/gmail-connection";
@@ -24,8 +25,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomeComponent() {
-  const navigate = Route.useNavigate();
-  const { q } = Route.useSearch();
+  const [searchQueryFromUrl, setSearchQueryFromUrl] = useQueryState("q");
   const { data: session, isPending: isSessionLoading } = authClient.useSession();
   const { data: applications } = useQuery(
     trpc.jobTracking.getApplications.queryOptions()
@@ -41,15 +41,9 @@ function HomeComponent() {
     statusCounts,
     filteredCount,
   } = useApplicationFilters(applications, {
-    searchQuery: q ?? "",
+    searchQuery: searchQueryFromUrl ?? "",
     onSearchQueryChange: (nextQuery) => {
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          q: nextQuery.trim().length > 0 ? nextQuery : undefined,
-        }),
-        replace: true,
-      });
+      void setSearchQueryFromUrl(nextQuery.trim().length > 0 ? nextQuery : null);
     },
   });
 

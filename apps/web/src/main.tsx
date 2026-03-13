@@ -4,6 +4,7 @@ import { routeTree } from "./routeTree.gen";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient, trpc } from "./utils/trpc";
 import { authClient } from "./lib/auth-client";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 
 const router = createRouter({
   routeTree,
@@ -12,7 +13,7 @@ const router = createRouter({
   Wrap: function WrapComponent({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-          {children}
+        <NuqsAdapter>{children}</NuqsAdapter>
       </QueryClientProvider>
     );
   },
