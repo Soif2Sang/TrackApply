@@ -86,11 +86,13 @@ function ApplicationDetailPage() {
     });
   };
 
-  const handleMerge = (targetId: string) => {
+  const handleMergeIntoCurrentApplication = (absorbedApplicationIds: string[]) => {
     if (!application) return;
+    const keptApplicationId = application.id;
+
     mutations.mergeApplications({
-      sourceApplicationId: application.id,
-      targetApplicationId: targetId,
+      absorbedApplicationIds,
+      keptApplicationId,
     });
   };
 
@@ -171,13 +173,8 @@ function ApplicationDetailPage() {
       <MergeDialog
         open={showMergeDialog}
         onOpenChange={setShowMergeDialog}
-        onConfirm={() => {
-          const targetId = mergeTargets.filteredTargets.find(
-            (t) => t.id !== id
-          )?.id;
-          if (targetId) handleMerge(targetId);
-        }}
-        targets={mergeTargets.filteredTargets}
+        onConfirm={handleMergeIntoCurrentApplication}
+        absorbedApplicationCandidates={mergeTargets.filteredTargets}
         searchQuery={mergeTargets.searchQuery}
         onSearchChange={mergeTargets.setSearchQuery}
         currentCompany={application.company}

@@ -51,12 +51,12 @@ export function useApplicationMutations(
         queryKey: trpc.jobTracking.getApplications.queryKey(),
       });
       await queryClient.invalidateQueries({
-        queryKey: trpc.jobTracking.getApplicationById.queryKey({ id: data.targetApplicationId }),
+        queryKey: trpc.jobTracking.getApplicationById.queryKey({ id: data.keptApplicationId }),
       });
       toast.success("Applications merged successfully", {
-        description: `Moved ${data.eventsMoved} events to the target application`,
+        description: `Merged ${data.mergedApplicationCount} applications and moved ${data.movedEventCount} events`,
       });
-      onNavigateHome();
+      onNavigateToApplication(data.keptApplicationId);
     },
     onError: (error) => {
       toast.error("Failed to merge applications", {

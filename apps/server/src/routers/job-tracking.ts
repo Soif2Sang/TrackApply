@@ -9,7 +9,7 @@ import {
   eventClassificationEnum,
 } from "../db/schema/job-applications";
 import { user } from "../db/schema/auth";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { t } from "../lib/trpc";
 import { triggerManualSync } from "../jobs/schedule";
@@ -382,88 +382,90 @@ export const jobTrackingRouter = t.router({
 
   mergeApplications: requireAuth
     .input(z.object({
-      sourceApplicationId: z.string().uuid(),
-      targetApplicationId: z.string().uuid(),
+      absorbedApplicationIds: z.array(z.string().uuid()).min(1),
+      keptApplicationId: z.string().uuid(),
     }))
     .mutation(async ({ input, ctx }) => {
       const userId = ctx.session!.user.id;
 
-      // Validate both applications exist and belong to user
-      const [sourceApp, targetApp] = await Promise.all([
-        db.query.jobApplications.findFirst({
-          where: and(
-            eq(jobApplications.id, input.sourceApplicationId),
-            eq(jobApplications.userId, userId)
-          ),
-        }),
-        db.query.jobApplications.findFirst({
-          where: and(
-            eq(jobApplications.id, input.targetApplicationId),
-            eq(jobApplications.userId, userId)
-          ),
-        }),
-      ]);
+      const uniqueAbsorbedApplicationIds = Array.from(new Set(input.absorbedApplicationIds));
 
-      if (!sourceApp) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Source application not found",
-        });
-      }
-
-      if (!targetApp) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Target application not found",
-        });
-      }
-
-      if (input.sourceApplicationId === input.targetApplicationId) {
+      if (uniqueAbsorbedApplicationIds.includes(input.keptApplicationId)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Cannot merge an application with itself",
         });
       }
 
-      // Move all events from source to target
-      await db
-        .update(applicationEvents)
-        .set({ applicationId: input.targetApplicationId })
-        .where(eq(applicationEvents.applicationId, input.sourceApplicationId));
+      const keptApplication = await db.query.jobApplications.findFirst({
+        where: and(
+          eq(jobApplications.id, input.keptApplicationId),
+          eq(jobApplications.userId, userId)
+        ),
+      });
 
-      // Move all notes from source to target
+      if (!keptApplication) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Kept application not found",
+        });
+      }
+
+      const absorbedApplications = await db.query.jobApplications.findMany({
+        where: and(
+          eq(jobApplications.userId, userId),
+          inArray(jobApplications.id, uniqueAbsorbedApplicationIds)
+        ),
+      });
+
+      if (absorbedApplications.length !== uniqueAbsorbedApplicationIds.length) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "One or more applications to merge were not found",
+        });
+      }
+
+      // Move all events from absorbed applications to the kept application.
+      const movedEventRows = await db
+        .update(applicationEvents)
+        .set({ applicationId: input.keptApplicationId })
+        .where(inArray(applicationEvents.applicationId, uniqueAbsorbedApplicationIds))
+        .returning({ id: applicationEvents.id });
+
+      // Move all notes from absorbed applications to the kept application.
       await db
         .update(applicationNotes)
-        .set({ applicationId: input.targetApplicationId })
-        .where(eq(applicationNotes.applicationId, input.sourceApplicationId));
+        .set({ applicationId: input.keptApplicationId })
+        .where(inArray(applicationNotes.applicationId, uniqueAbsorbedApplicationIds));
 
-      // Get all events from target application to recalculate status
+      // Get all events from the kept application to recalculate status.
       const allEvents = await db.query.applicationEvents.findMany({
-        where: eq(applicationEvents.applicationId, input.targetApplicationId),
+        where: eq(applicationEvents.applicationId, input.keptApplicationId),
       });
 
       const newStatus = allEvents.length > 0
         ? replayEventsToStatus(allEvents)
-        : targetApp.currentStatus;
+        : keptApplication.currentStatus;
 
-      // Update target application status
+      // Update kept application status.
       await db
         .update(jobApplications)
         .set({
           currentStatus: newStatus,
           updatedAt: new Date(),
         })
-        .where(eq(jobApplications.id, input.targetApplicationId));
+        .where(eq(jobApplications.id, input.keptApplicationId));
 
-      // Delete source application (events and notes are now moved)
+      // Delete absorbed applications (events and notes are now moved).
       await db
         .delete(jobApplications)
-        .where(eq(jobApplications.id, input.sourceApplicationId));
+        .where(inArray(jobApplications.id, uniqueAbsorbedApplicationIds));
 
       return {
         success: true,
-        targetApplicationId: input.targetApplicationId,
-        eventsMoved: allEvents.length,
+        keptApplicationId: input.keptApplicationId,
+        mergedApplicationCount: uniqueAbsorbedApplicationIds.length,
+        movedEventCount: movedEventRows.length,
       };
     }),
 

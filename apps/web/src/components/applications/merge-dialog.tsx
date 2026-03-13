@@ -22,8 +22,8 @@ interface MergeTarget {
 interface MergeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  targets: MergeTarget[];
+  onConfirm: (absorbedApplicationIds: string[]) => void;
+  absorbedApplicationCandidates: MergeTarget[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   currentCompany: string | null;
@@ -36,7 +36,7 @@ export function MergeDialog({
   open,
   onOpenChange,
   onConfirm,
-  targets,
+  absorbedApplicationCandidates,
   searchQuery,
   onSearchChange,
   currentCompany,
@@ -44,20 +44,28 @@ export function MergeDialog({
   isPending,
   hasTargets,
 }: MergeDialogProps) {
-  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const [selectedAbsorbedApplicationIds, setSelectedAbsorbedApplicationIds] = useState<string[]>([]);
 
   const handleClose = () => {
     onOpenChange(false);
-    setSelectedTargetId(null);
+    setSelectedAbsorbedApplicationIds([]);
     onSearchChange("");
   };
 
   const handleConfirm = () => {
-    if (selectedTargetId) {
-      onConfirm();
-      setSelectedTargetId(null);
+    if (selectedAbsorbedApplicationIds.length > 0) {
+      onConfirm(selectedAbsorbedApplicationIds);
+      setSelectedAbsorbedApplicationIds([]);
       onSearchChange("");
     }
+  };
+
+  const toggleAbsorbedApplicationSelection = (applicationId: string) => {
+    setSelectedAbsorbedApplicationIds((prev) =>
+      prev.includes(applicationId)
+        ? prev.filter((id) => id !== applicationId)
+        : [...prev, applicationId]
+    );
   };
 
   return (
@@ -72,17 +80,17 @@ export function MergeDialog({
         <DialogHeader>
           <DialogTitle className="text-foreground">Merge Application</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Merge{" "}
+            Merge other applications into{" "}
             <span className="text-foreground font-medium">
               {currentCompany ?? "Unknown company"} - {currentPosition ?? "Unknown position"}
-            </span>{" "}
-            into another application. All emails and events will be moved to the
-            selected application.
+            </span>
+            . All emails and events from selected applications will be moved to
+            this one.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <Label className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-3 block">
-            Select target application
+            Select applications to merge
           </Label>
 
           {/* Search bar */}
@@ -97,44 +105,44 @@ export function MergeDialog({
           </div>
 
           <div className="max-h-[300px] overflow-y-auto space-y-2">
-            {targets.length === 0 ? (
+            {absorbedApplicationCandidates.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 {!hasTargets
                   ? "No other applications available to merge into"
                   : "No applications match your search"}
               </p>
             ) : (
-              targets.map((targetApp) => (
+              absorbedApplicationCandidates.map((absorbedApplicationCandidate) => (
                 <div
-                  key={targetApp.id}
+                  key={absorbedApplicationCandidate.id}
                   className={cn(
                     "flex items-center gap-2 p-3 rounded-md border transition-all group",
-                    selectedTargetId === targetApp.id
+                    selectedAbsorbedApplicationIds.includes(absorbedApplicationCandidate.id)
                       ? "border-blue-500/60 bg-blue-500/10"
                       : "border-border hover:border-blue-500/30 hover:bg-blue-500/5"
                   )}
                 >
                   <button
                     type="button"
-                    onClick={() => setSelectedTargetId(targetApp.id)}
+                    onClick={() => toggleAbsorbedApplicationSelection(absorbedApplicationCandidate.id)}
                     className="flex-1 text-left"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-foreground">
-                            {targetApp.company ?? <span className="italic text-muted-foreground">Unknown company</span>}
+                            {absorbedApplicationCandidate.company ?? <span className="italic text-muted-foreground">Unknown company</span>}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {targetApp.position ?? <span className="italic">Unknown position</span>}
+                            {absorbedApplicationCandidate.position ?? <span className="italic">Unknown position</span>}
                           </p>
                       </div>
-                      {selectedTargetId === targetApp.id && (
+                      {selectedAbsorbedApplicationIds.includes(absorbedApplicationCandidate.id) && (
                         <Check className="h-4 w-4 text-blue-400" />
                       )}
                     </div>
                   </button>
                   <a
-                    href={`/applications/${targetApp.id}`}
+                    href={`/applications/${absorbedApplicationCandidate.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
@@ -159,7 +167,7 @@ export function MergeDialog({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!selectedTargetId || isPending}
+            disabled={selectedAbsorbedApplicationIds.length === 0 || isPending}
             size="sm"
             className="gap-2 bg-blue-500 text-white hover:bg-blue-600"
           >
@@ -171,7 +179,7 @@ export function MergeDialog({
             ) : (
               <>
                 <Merge className="h-3.5 w-3.5" />
-                Merge Applications
+                Merge {selectedAbsorbedApplicationIds.length || ""} Applications
               </>
             )}
           </Button>
