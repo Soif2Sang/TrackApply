@@ -125,7 +125,14 @@ export async function findMatchingApplication(
       with: { application: true },
     });
     if (eventInThread?.application?.userId === userId) {
-      return eventInThread.application;
+      const hasConflictingJobId =
+        !!jobId &&
+        !!eventInThread.application.jobId &&
+        eventInThread.application.jobId !== jobId;
+
+      if (!hasConflictingJobId) {
+        return eventInThread.application;
+      }
     }
   }
 
